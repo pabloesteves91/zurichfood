@@ -32,16 +32,20 @@ npm run preview
 
 ## Deployment
 
-Push auf `main` → GitHub Actions baut und veröffentlicht auf GitHub Pages
-(Einstellungen → Pages → Source: **GitHub Actions**).
+GitHub Pages: **Settings → Pages → Deploy from a branch → `main` / `/docs`**.
 
-Die Testumgebung ist für Google auf `noindex` gestellt. Für den Livegang auf zurichfood.ch
-im Workflow setzen:
+Die fertige Seite liegt im Ordner `docs/`. Nach jeder Änderung (auch im CMS) neu bauen und pushen:
 
+```bash
+git pull
+npm run build
+git add docs && git commit -m "Seite neu gebaut" && git push
 ```
-SITE_URL=https://zurichfood.ch
-BASE_PATH=/
-PUBLIC_INDEXING=true
+
+Die Testumgebung ist für Google auf `noindex` gestellt. Für den Livegang auf zurichfood.ch so bauen:
+
+```bash
+SITE_URL=https://zurichfood.ch BASE_PATH=/ PUBLIC_INDEXING=true npm run build
 ```
 
 und in `public/admin/config.yml` `site_url` anpassen. Danach die Domain in der

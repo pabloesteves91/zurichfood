@@ -1,0 +1,149 @@
+# Redaktionssystem für zurichfood.ch (Sveltia CMS, Decap-kompatibel)
+# Login: "Sign In with Token" mit einem GitHub Personal Access Token
+# (fine-grained, Repository zurichfood, Berechtigung "Contents: Read and write").
+backend:
+  name: github
+  repo: pabloesteves91/zurichfood
+  branch: main
+  commit_messages:
+    create: 'Neuer Beitrag: {{slug}}'
+    update: 'Beitrag aktualisiert: {{slug}}'
+    delete: 'Beitrag gelöscht: {{slug}}'
+    uploadMedia: 'Bild hochgeladen: {{path}}'
+
+site_url: https://pabloesteves91.github.io/zurichfood/
+locale: de
+
+media_folder: /src/content/posts/images
+public_folder: ../images
+
+i18n:
+  structure: multiple_folders
+  locales: [de, en]
+  default_locale: de
+
+collections:
+  - name: posts
+    label: Beiträge
+    label_singular: Beitrag
+    folder: src/content/posts
+    create: true
+    i18n: true
+    slug: '{{slug}}'
+    identifier_field: title
+    summary: '{{title}} · {{category}} · {{date | date("DD.MM.YYYY")}}'
+    sortable_fields: [date, title, category]
+    view_filters:
+      - { label: Food, field: category, pattern: food }
+      - { label: Hotels, field: category, pattern: hotels }
+      - { label: Stores & Brands, field: category, pattern: stores-brands }
+      - { label: Erlebnisse, field: category, pattern: erlebnisse }
+      - { label: Entwürfe, field: draft, pattern: true }
+    fields:
+      - { name: title, label: Titel, widget: string, i18n: true }
+      - name: description
+        label: Kurzbeschreibung (Lead & Google-Snippet)
+        hint: 120–160 Zeichen. Erscheint unter dem Titel und in den Google-Suchergebnissen.
+        widget: text
+        i18n: true
+        pattern: ['^[\s\S]{50,200}$', 'Bitte 50–200 Zeichen']
+      - { name: seoTitle, label: SEO-Titel (optional), hint: 'Titel für Google, max. ca. 60 Zeichen. Leer = Titel.', widget: string, required: false, i18n: true }
+      - { name: urlSlug, label: URL (optional), hint: 'Eigene URL, z.B. für Englisch. Nur Kleinbuchstaben und Bindestriche.', widget: string, required: false, i18n: true }
+      - name: category
+        label: Rubrik
+        widget: select
+        i18n: duplicate
+        options:
+          - { label: Food, value: food }
+          - { label: Hotels, value: hotels }
+          - { label: Stores & Brands, value: stores-brands }
+          - { label: Erlebnisse, value: erlebnisse }
+      - { name: date, label: Datum, widget: datetime, time_format: false, date_format: DD.MM.YYYY, format: YYYY-MM-DD, i18n: duplicate }
+      - { name: updated, label: Aktualisiert am (optional), widget: datetime, time_format: false, date_format: DD.MM.YYYY, format: YYYY-MM-DD, required: false, i18n: duplicate }
+      - { name: authors, label: Autorinnen, widget: select, multiple: true, options: [Laura Wick, Eva Wick], default: [Laura Wick, Eva Wick], i18n: duplicate }
+      - { name: image, label: Titelbild, widget: image, i18n: duplicate, hint: 'Hochformat (4:5) wirkt am besten. Mind. 1200 px breit.' }
+      - { name: imageAlt, label: Bildbeschreibung (Alt-Text), hint: 'Beschreibe, was zu sehen ist. Wichtig für Google und Barrierefreiheit.', widget: string, i18n: true }
+      - { name: featured, label: Titelgeschichte auf der Startseite, widget: boolean, default: false, i18n: duplicate }
+      - { name: draft, label: Entwurf (nicht veröffentlichen), widget: boolean, default: false, i18n: duplicate }
+      - { name: disclosure, label: Transparenz-Hinweis, hint: 'z.B. «Wir wurden eingeladen.»', widget: text, required: false, i18n: true }
+      - name: places
+        label: Adressen (für Karte & Google)
+        widget: relation
+        collection: places
+        search_fields: [name, city]
+        value_field: '{{slug}}'
+        display_fields: ['{{name}} ({{city}})']
+        multiple: true
+        required: false
+        i18n: duplicate
+      - name: faq
+        label: Häufige Fragen
+        widget: list
+        required: false
+        i18n: true
+        summary: '{{fields.q}}'
+        fields:
+          - { name: q, label: Frage, widget: string }
+          - { name: a, label: Antwort, widget: text }
+      - { name: body, label: Text, widget: markdown, i18n: true }
+
+  - name: places
+    label: Adressen
+    label_singular: Adresse
+    folder: src/content/places
+    extension: json
+    format: json
+    create: true
+    slug: '{{name}}'
+    identifier_field: name
+    summary: '{{name}} · {{area}}'
+    fields:
+      - { name: name, label: Name, widget: string }
+      - name: category
+        label: Rubrik
+        widget: select
+        options:
+          - { label: Food, value: food }
+          - { label: Hotels, value: hotels }
+          - { label: Stores & Brands, value: stores-brands }
+          - { label: Erlebnisse, value: erlebnisse }
+      - name: type
+        label: Typ (für Google)
+        widget: select
+        default: Restaurant
+        options:
+          - { label: Restaurant, value: Restaurant }
+          - { label: Café, value: CafeOrCoffeeShop }
+          - { label: Bar, value: BarOrPub }
+          - { label: Bäckerei, value: Bakery }
+          - { label: Hotel, value: Hotel }
+          - { label: Laden / Store, value: Store }
+          - { label: Event / Markt, value: Event }
+          - { label: Sonstiges, value: LocalBusiness }
+      - { name: street, label: Strasse & Nr., widget: string }
+      - { name: postalCode, label: PLZ, widget: string }
+      - { name: city, label: Ort, widget: string, default: Zürich }
+      - { name: area, label: 'Kreis / Region', hint: '«Kreis 1» … «Kreis 12» oder Region wie «Tessin»', widget: string }
+      - { name: lat, label: Breitengrad, hint: 'In Google Maps Rechtsklick auf den Ort → erste Zahl', widget: number, value_type: float }
+      - { name: lng, label: Längengrad, hint: 'zweite Zahl', widget: number, value_type: float }
+      - { name: cuisine, label: Küche, widget: string, required: false }
+      - name: price
+        label: Preisniveau
+        widget: select
+        required: false
+        options:
+          - { label: '$ Günstig', value: 1 }
+          - { label: '$$ Mittel', value: 2 }
+          - { label: '$$$ Gehoben', value: 3 }
+          - { label: '$$$$ Fine Dining', value: 4 }
+      - { name: phone, label: Telefon, widget: string, required: false }
+      - { name: website, label: Webseite, widget: string, required: false }
+      - { name: award, label: Auszeichnung, widget: string, required: false }
+      - name: summary
+        label: Kurzbeschreibung
+        widget: object
+        fields:
+          - { name: de, label: Deutsch, widget: string }
+          - { name: en, label: Englisch, widget: string }
+      - { name: image, label: 'Bild (optional)', widget: image, required: false, media_folder: /src/content/posts/images, public_folder: ../posts/images }
+      - { name: post, label: 'Beitrag (Dateiname ohne .md)', widget: string, required: false }

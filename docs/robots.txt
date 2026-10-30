@@ -1,0 +1,5 @@
+# Testumgebung: Indexierung deaktiviert (PUBLIC_INDEXING=true für Live)
+User-agent: *
+Disallow: /admin/
+
+Sitemap: https://pabloesteves91.github.io/zurichfood/sitemap-index.xml
