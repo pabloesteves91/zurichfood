@@ -1,0 +1,10 @@
+---
+import CategoryView from '../../../views/CategoryView.astro';
+import { CATEGORIES, CATEGORY_META, type Category } from '../../../i18n';
+
+export function getStaticPaths() {
+  return CATEGORIES.map((category) => ({ params: { category: CATEGORY_META[category].slug.en }, props: { category } }));
+}
+const { category } = Astro.props as { category: Category };
+---
+<CategoryView lang="en" category={category} />

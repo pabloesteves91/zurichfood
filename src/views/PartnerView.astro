@@ -1,0 +1,158 @@
+---
+import { Image } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import ContactForm from '../components/ContactForm.astro';
+import sisters from '../assets/brand/laura-eva-wick.jpg';
+import { SITE } from '../config';
+import { ROUTES, t, type Lang } from '../i18n';
+import { absolute, route } from '../lib/urls';
+import { breadcrumbs } from '../lib/schema';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const ui = t(lang);
+const years = new Date().getFullYear() - SITE.since;
+
+const copy = {
+  de: {
+    title: 'Partner & Kooperationen',
+    seo: 'Kooperationen mit Zürich Food: Media-Kit für Restaurants, Hotels & Marken',
+    description: 'Restaurants, Hotels, Stores und Marken: So arbeitet ihr mit Zürich Food zusammen. Formate, Reichweite, Grundsätze und Anfrage.',
+    lead: 'Wir arbeiten gern mit Restaurants, Hotels, Stores, Marken und Veranstaltern zusammen, die zu uns passen und hinter denen wir stehen können.',
+    statLabels: { years: 'Jahre auf Instagram', followers: 'Follower', reach: 'Reichweite / Monat', engagement: 'Engagement-Rate', langs: 'Sprachen', sections: 'Rubriken' },
+    formatsTitle: 'Formate',
+    formats: [
+      ['Restaurantbesuch', 'Ehrlicher Erfahrungsbericht mit eigenen Fotos auf der Webseite, dazu Reels und Stories auf Instagram.'],
+      ['Hotelaufenthalt', 'Ausführliche Reportage über Zimmer, Küche und Umgebung, mit Adressen, Tipps und FAQ, optimiert für Google.'],
+      ['Produkt & Brand', 'Vorstellung von Gourmet-Produkten, Concept-Stores und lokalen Marken in der Rubrik Stores & Brands.'],
+      ['Events & Eröffnungen', 'Begleitung von Events, Pop-ups und Neueröffnungen, live auf Instagram und als Guide auf der Webseite.'],
+    ],
+    principlesTitle: 'Unsere Grundsätze',
+    principles: [
+      ['Ehrliche Meinung', 'Wir empfehlen nur, was uns überzeugt. Eine Einladung garantiert keine positive Bewertung.'],
+      ['Volle Transparenz', 'Einladungen und bezahlte Kooperationen kennzeichnen wir immer klar und sichtbar.'],
+      ['Nachhaltige Sichtbarkeit', 'Beiträge auf zurichfood.ch bleiben dauerhaft online und werden über Google gefunden, nicht nur 24 Stunden lang.'],
+    ],
+    formTitle: 'Erzählt uns eure Idee',
+    formText: 'Ob Restaurantbesuch, Produktvorstellung oder Event: Wir entwickeln gemeinsam das passende Format und melden uns persönlich.',
+    direct: 'Oder direkt:',
+  },
+  en: {
+    title: 'Partners & Collaborations',
+    seo: 'Work with Zürich Food: Media Kit for Restaurants, Hotels & Brands',
+    description: 'Restaurants, hotels, stores and brands: how to work with Zürich Food. Formats, reach, principles and enquiries.',
+    lead: 'We love working with restaurants, hotels, stores, brands and event organisers that suit us and that we can genuinely stand behind.',
+    statLabels: { years: 'years on Instagram', followers: 'followers', reach: 'monthly reach', engagement: 'engagement rate', langs: 'languages', sections: 'sections' },
+    formatsTitle: 'Formats',
+    formats: [
+      ['Restaurant visit', 'An honest review with our own photography on the website, plus reels and stories on Instagram.'],
+      ['Hotel stay', 'An in-depth feature on rooms, food and surroundings, with addresses, tips and FAQs, optimised for Google.'],
+      ['Product & brand', 'Features on gourmet products, concept stores and local brands in our Stores & Brands section.'],
+      ['Events & openings', 'Coverage of events, pop-ups and openings, live on Instagram and as a guide on the website.'],
+    ],
+    principlesTitle: 'Our principles',
+    principles: [
+      ['Honest opinion', 'We only recommend what convinces us. An invitation never guarantees a positive review.'],
+      ['Full transparency', 'Invitations and paid collaborations are always clearly disclosed.'],
+      ['Lasting visibility', 'Stories on zurichfood.ch stay online and are found via Google, not just for 24 hours.'],
+    ],
+    formTitle: 'Tell us your idea',
+    formText: 'Restaurant visit, product feature or event: we will shape the right format together and get back to you personally.',
+    direct: 'Or directly:',
+  },
+}[lang];
+
+const stats = [
+  { v: `${years}`, l: copy.statLabels.years },
+  { v: SITE.stats.instagramFollowers, l: copy.statLabels.followers },
+  { v: SITE.stats.monthlyReach, l: copy.statLabels.reach },
+  { v: SITE.stats.avgEngagement, l: copy.statLabels.engagement },
+  { v: '2', l: copy.statLabels.langs },
+  { v: '4', l: copy.statLabels.sections },
+].filter((s) => s.v).slice(0, 4);
+---
+
+<Base
+  lang={lang}
+  title={copy.seo}
+  description={copy.description}
+  alternates={{ de: ROUTES.partner.de, en: ROUTES.partner.en }}
+  jsonLd={[breadcrumbs([{ name: ui.home, url: absolute(route('home', lang), Astro.site) }, { name: copy.title, url: absolute(route('partner', lang), Astro.site) }])]}
+>
+  <header class="wrap page-head">
+    <p class="kicker">Media Kit</p>
+    <h1>{copy.title}</h1>
+    <p class="lead">{copy.lead}</p>
+  </header>
+
+  <section class="wrap">
+    <dl class="stats" style={`--n:${stats.length}`}>
+      {stats.map((s) => <div class="reveal"><dt>{s.l}</dt><dd>{s.v}</dd></div>)}
+    </dl>
+  </section>
+
+  <section class="wrap section" aria-labelledby="formats">
+    <div class="section-head"><h2 id="formats">{copy.formatsTitle}</h2></div>
+    <ol class="formats">
+      {copy.formats.map(([h, p], i) => (
+        <li class="reveal"><span class="num">0{i + 1}</span><h3>{h}</h3><p>{p}</p></li>
+      ))}
+    </ol>
+  </section>
+
+  <section class="principles section">
+    <div class="wrap principles__inner">
+      <div class="principles__media reveal">
+        <Image src={sisters} alt={lang === 'de' ? 'Laura und Eva Wick' : 'Laura and Eva Wick'} widths={[400, 640]} sizes="(max-width: 860px) 70vw, 380px" />
+      </div>
+      <div>
+        <h2>{copy.principlesTitle}</h2>
+        <ul>
+          {copy.principles.map(([h, p]) => <li class="reveal"><h3>{h}</h3><p>{p}</p></li>)}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap section form-grid" id="anfrage" aria-labelledby="form-title">
+    <div>
+      <h2 id="form-title">{copy.formTitle}</h2>
+      <p class="lead" style="margin-top:1rem;color:var(--muted)">{copy.formText}</p>
+      <p class="meta" style="margin-top:2rem">{copy.direct}<br /><a href={`mailto:${SITE.email}`}>{SITE.email}</a><br /><a href={`tel:${SITE.phoneIntl}`}>{SITE.phone}</a></p>
+    </div>
+    <ContactForm lang={lang} variant="partner" />
+  </section>
+</Base>
+
+<style>
+  .stats { display: grid; grid-template-columns: repeat(var(--n, 4), 1fr); margin: 0; border-block: 1px solid var(--text); }
+  .stats > div { padding: 2rem 1.5rem; text-align: center; }
+  .stats > div + div { border-left: 1px solid var(--line); }
+  .stats dd { margin: 0; font-family: var(--serif); font-size: var(--step-5); line-height: 1; order: -1; }
+  .stats > div { display: flex; flex-direction: column-reverse; gap: 0.6rem; }
+  .stats dt { font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+
+  .formats { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 3rem clamp(2rem, 5vw, 5rem); }
+  .formats .num { color: var(--accent); font-size: 0.8rem; }
+  .formats h3 { font-size: var(--step-2); margin: 0.5rem 0 0.75rem; }
+  .formats p { color: var(--muted); }
+
+  .principles { background: var(--paper); }
+  .principles__inner { display: grid; grid-template-columns: minmax(0, 380px) 1fr; gap: clamp(2rem, 6vw, 6rem); align-items: center; }
+  .principles__media { aspect-ratio: 3 / 4; overflow: hidden; }
+  .principles__media img { width: 100%; height: 100%; object-fit: cover; }
+  .principles h2 { font-size: var(--step-4); }
+  .principles ul { list-style: none; padding: 0; margin: 2rem 0 0; display: grid; gap: 1.75rem; }
+  .principles h3 { font-size: var(--step-1); }
+  .principles li p { color: var(--muted); margin-top: 0.35rem; }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: clamp(2rem, 6vw, 6rem); }
+  .form-grid h2 { font-size: var(--step-4); }
+
+  @media (max-width: 860px) {
+    .stats { grid-template-columns: 1fr; }
+    .stats > div + div { border-left: 0; border-top: 1px solid var(--line); }
+    .formats, .principles__inner, .form-grid { grid-template-columns: 1fr; }
+    .principles__media { max-width: 320px; }
+  }
+</style>

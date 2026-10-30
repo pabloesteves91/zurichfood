@@ -1,0 +1,107 @@
+---
+import { Image } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import Newsletter from '../components/Newsletter.astro';
+import sisters from '../assets/brand/laura-eva-wick.jpg';
+import { SITE } from '../config';
+import { ROUTES, t, type Lang } from '../i18n';
+import { absolute, route } from '../lib/urls';
+import { breadcrumbs, faqPage, organization } from '../lib/schema';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const ui = t(lang);
+
+const copy = {
+  de: {
+    title: 'Über uns',
+    seo: 'Über uns: Laura & Eva Wick von Zürich Food',
+    description: 'Hinter Zürich Food stehen die Schwestern Laura und Eva Wick. Seit rund acht Jahren teilen sie ihre Lieblingsadressen in Zürich, ehrlich und persönlich.',
+    h1: 'Zwei Schwestern, eine Passion.',
+    p: [
+      'Was als Tagebuch für unsere Food-Erinnerungen begann, ist mit den Jahren zu einer festen Adresse in Zürich geworden, völlig unabsichtlich.',
+      'Heute teilen wir, was uns begeistert: von Street Food bis Gourmet, von schönen Hotels über Stores und Brands bis zu besonderen Erlebnissen. Immer mit ehrlicher Meinung und im Austausch mit unserer Community.',
+    ],
+    faq: [
+      ['Was ist Zürich Food?', 'Zürich Food ist ein Food- und Lifestyle-Blog aus Zürich der Schwestern Laura Wick und Eva Wick. Wir empfehlen Restaurants, Cafés, Brunch-Adressen, Hotels, Concept-Stores, Marken und Erlebnisse in und um Zürich, immer mit ehrlicher Meinung.'],
+      ['Was ist der Unterschied zwischen Instagram und der Webseite?', 'Auf Instagram (@zurich.food) teilen wir schnelle Eindrücke. Auf zurichfood.ch findest du ausführlichere Beiträge, Adressen und eine Karte, sortiert nach Food, Hotels, Stores & Brands und Erlebnissen.'],
+      ['Sind die Empfehlungen ehrlich?', 'Ja. Eine ehrliche Meinung ist die Basis für das Vertrauen unserer Community. Einladungen kennzeichnen wir immer transparent.'],
+      ['Wie kann ich mit Zürich Food zusammenarbeiten?', `Restaurants, Hotels, Stores, Marken und Veranstalter erreichen uns über die Partner-Seite, per E-Mail an ${SITE.email} oder telefonisch unter ${SITE.phone}.`],
+      ['Wie kann ich einen Tipp schicken?', 'Sehr gerne! Schick uns deinen Geheimtipp für Zürich über das Kontaktformular oder als Nachricht auf Instagram.'],
+    ],
+  },
+  en: {
+    title: 'About us',
+    seo: 'About us: Laura & Eva Wick of Zürich Food',
+    description: 'Zürich Food is run by sisters Laura and Eva Wick. For around eight years they have shared their favourite places in Zurich, honestly and personally.',
+    h1: 'Two sisters, one passion.',
+    p: [
+      'What started as a diary of our food memories has, over the years and quite by accident, become a go-to address in Zurich.',
+      'Today we share what excites us: from street food to fine dining, from beautiful hotels to stores and brands and special experiences. Always with an honest opinion and in conversation with our community.',
+    ],
+    faq: [
+      ['What is Zürich Food?', 'Zürich Food is a food and lifestyle blog from Zurich by sisters Laura Wick and Eva Wick. We recommend restaurants, cafés, brunch spots, hotels, concept stores, brands and experiences in and around Zurich, always honestly.'],
+      ['What is the difference between Instagram and the website?', 'On Instagram (@zurich.food) we share quick impressions. On zurichfood.ch you will find in-depth stories, addresses and a map, organised into Food, Hotels, Stores & Brands and Experiences.'],
+      ['Are the recommendations honest?', 'Yes. An honest opinion is the foundation of our community’s trust. We always disclose invitations.'],
+      ['How can I work with Zürich Food?', `Restaurants, hotels, stores, brands and organisers can reach us via the partners page, by email at ${SITE.email} or by phone on ${SITE.phone}.`],
+      ['How can I send a tip?', 'We would love that! Send us your Zurich insider tip via the contact form or as a message on Instagram.'],
+    ],
+  },
+}[lang];
+
+const jsonLd = [
+  { '@context': 'https://schema.org', '@type': 'AboutPage', name: copy.seo, url: absolute(route('about', lang), Astro.site), mainEntity: organization(Astro.site, import.meta.env.BASE_URL) },
+  breadcrumbs([{ name: ui.home, url: absolute(route('home', lang), Astro.site) }, { name: copy.title, url: absolute(route('about', lang), Astro.site) }]),
+  faqPage(copy.faq.map(([q, a]) => ({ q, a }))),
+];
+---
+
+<Base lang={lang} title={copy.seo} description={copy.description} alternates={{ de: ROUTES.about.de, en: ROUTES.about.en }} image={sisters} imageAlt="Laura Wick & Eva Wick" jsonLd={jsonLd}>
+  <section class="wrap about">
+    <div class="about__media">
+      <Image src={sisters} alt={lang === 'de' ? 'Laura Wick und Eva Wick von Zürich Food' : 'Laura Wick and Eva Wick of Zürich Food'} widths={[480, 640]} sizes="(max-width: 860px) 100vw, 45vw" loading="eager" fetchpriority="high" />
+    </div>
+    <div class="about__body">
+      <p class="kicker">{copy.title}</p>
+      <h1>{copy.h1}</h1>
+      {copy.p.map((p, i) => <p class={i === 0 ? 'lead' : ''}>{p}</p>)}
+      <p class="sig">Laura &amp; Eva Wick</p>
+      <div class="about__cta">
+        <a class="btn" href={SITE.instagram} rel="me noopener" target="_blank">Instagram {SITE.instagramHandle}</a>
+        <a class="btn btn--ghost" href={route('contact', lang)}>{ui.contact}</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap wrap--read section" id="faq" aria-labelledby="faq-title">
+    <h2 id="faq-title" class="faq-title">{ui.faq}</h2>
+    {copy.faq.map(([q, a]) => (
+      <details>
+        <summary>{q}</summary>
+        <p>{a}</p>
+      </details>
+    ))}
+  </section>
+  <Newsletter lang={lang} />
+</Base>
+
+<style>
+  .about { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(2rem, 6vw, 6rem); align-items: center; padding-block: clamp(2rem, 5vw, 4rem); }
+  .about__media { aspect-ratio: 2 / 3; overflow: hidden; max-height: 82vh; }
+  .about__media img { width: 100%; height: 100%; object-fit: cover; }
+  .about__body { display: grid; gap: 1.25rem; }
+  .about__body h1 { font-size: var(--step-5); line-height: 1.02; }
+  .sig { font-family: var(--serif); font-style: italic; font-size: var(--step-2); color: var(--accent); }
+  .about__cta { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.5rem; }
+  .faq-title { font-size: var(--step-4); padding-bottom: 1rem; border-bottom: 1px solid var(--text); }
+  details { border-bottom: 1px solid var(--line); }
+  summary { cursor: pointer; list-style: none; padding: 1.35rem 2rem 1.35rem 0; position: relative; font-family: var(--serif); font-size: var(--step-1); }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: '+'; position: absolute; right: 0; top: 1.2rem; font-family: var(--sans); font-size: 1.4rem; font-weight: 300; transition: transform 0.3s var(--ease); }
+  details[open] summary::after { transform: rotate(45deg); }
+  details p { padding-bottom: 1.5rem; color: #3a3833; }
+  @media (max-width: 860px) {
+    .about { grid-template-columns: 1fr; }
+    .about__media { aspect-ratio: 4 / 5; margin-inline: calc(-1 * var(--gutter)); max-height: none; }
+  }
+</style>

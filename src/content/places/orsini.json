@@ -1,0 +1,21 @@
+{
+  "name": "ORSINI",
+  "category": "food",
+  "type": "Restaurant",
+  "street": "Poststrasse 12",
+  "postalCode": "8001",
+  "city": "Zürich",
+  "area": "Kreis 1",
+  "lat": 47.3699,
+  "lng": 8.5392,
+  "cuisine": "Italienisch",
+  "price": 4,
+  "website": "https://www.mandarinoriental.com/zurich",
+  "award": "1 Michelin-Stern",
+  "summary": {
+    "de": "Italienisches Fine Dining im Mandarin Oriental Savoy.",
+    "en": "Italian fine dining at the Mandarin Oriental Savoy."
+  },
+  "post": "gourmet-restaurants-schweiz",
+  "image": "../posts/images/gourmet-orsini-zuerich-interieur.jpg"
+}

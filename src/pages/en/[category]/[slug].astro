@@ -1,0 +1,16 @@
+---
+import PostView from '../../../views/PostView.astro';
+import { CATEGORY_META } from '../../../i18n';
+import { getPosts, type Post } from '../../../lib/posts';
+import { postSlug } from '../../../lib/urls';
+
+export async function getStaticPaths() {
+  const posts = await getPosts('en');
+  return posts.map((post) => ({
+    params: { category: CATEGORY_META[post.data.category].slug.en, slug: postSlug(post) },
+    props: { post },
+  }));
+}
+const { post } = Astro.props as { post: Post };
+---
+<PostView post={post} />

@@ -1,0 +1,16 @@
+{
+  "name": "Bellevue Noël",
+  "category": "erlebnisse",
+  "type": "Event",
+  "street": "Sechseläutenplatz",
+  "postalCode": "8001",
+  "city": "Zürich",
+  "area": "Kreis 1",
+  "lat": 47.3655,
+  "lng": 8.5458,
+  "summary": {
+    "de": "Neuer Weihnachtsmarkt am See mit begehbarem Adventskranz.",
+    "en": "New Christmas market by the lake with a walk-in Advent wreath."
+  },
+  "post": "weihnachtsmaerkte-zuerich"
+}

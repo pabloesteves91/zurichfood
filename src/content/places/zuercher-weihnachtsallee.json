@@ -1,0 +1,16 @@
+{
+  "name": "Zürcher Weihnachtsallee",
+  "category": "erlebnisse",
+  "type": "Event",
+  "street": "Europaallee",
+  "postalCode": "8004",
+  "city": "Zürich",
+  "area": "Kreis 4",
+  "lat": 47.377,
+  "lng": 8.535,
+  "summary": {
+    "de": "Urbaner Markt mit Design-Ständen und Fondue-Chalet.",
+    "en": "Urban market with design stalls and a fondue chalet."
+  },
+  "post": "weihnachtsmaerkte-zuerich"
+}

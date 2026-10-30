@@ -1,0 +1,65 @@
+---
+import Base from '../layouts/Base.astro';
+import ContactForm from '../components/ContactForm.astro';
+import { SITE } from '../config';
+import { ROUTES, t, type Lang } from '../i18n';
+import { absolute, route } from '../lib/urls';
+import { breadcrumbs } from '../lib/schema';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const ui = t(lang);
+const copy = {
+  de: {
+    title: 'Kontakt',
+    description: 'Kontakt zu Zürich Food: Kooperationen, Geheimtipps und Feedback. Per Formular, E-Mail, Telefon oder Instagram.',
+    lead: 'Du hast einen Geheimtipp, Feedback oder eine Idee für eine Zusammenarbeit? Wir freuen uns auf deine Nachricht.',
+    partner: 'Für Kooperationen findest du alle Infos auf unserer',
+    partnerLink: 'Partner-Seite',
+  },
+  en: {
+    title: 'Contact',
+    description: 'Get in touch with Zürich Food: collaborations, insider tips and feedback. Via form, email, phone or Instagram.',
+    lead: 'Got an insider tip, feedback or an idea for a collaboration? We look forward to hearing from you.',
+    partner: 'For collaborations, find all details on our',
+    partnerLink: 'partners page',
+  },
+}[lang];
+---
+
+<Base
+  lang={lang}
+  title={copy.title}
+  description={copy.description}
+  alternates={{ de: ROUTES.contact.de, en: ROUTES.contact.en }}
+  jsonLd={[
+    { '@context': 'https://schema.org', '@type': 'ContactPage', name: copy.title, url: absolute(route('contact', lang), Astro.site) },
+    breadcrumbs([{ name: ui.home, url: absolute(route('home', lang), Astro.site) }, { name: copy.title, url: absolute(route('contact', lang), Astro.site) }]),
+  ]}
+>
+  <section class="wrap section contact">
+    <div class="contact__info">
+      <h1>{copy.title}</h1>
+      <p class="lead">{copy.lead}</p>
+      <dl>
+        <div><dt>E-Mail</dt><dd><a href={`mailto:${SITE.email}`}>{SITE.email}</a></dd></div>
+        <div><dt>{ui.phone}</dt><dd><a href={`tel:${SITE.phoneIntl}`}>{SITE.phone}</a></dd></div>
+        <div><dt>Instagram</dt><dd><a href={SITE.instagram} rel="me noopener" target="_blank">{SITE.instagramHandle}</a></dd></div>
+      </dl>
+      <p class="meta">{copy.partner} <a href={route('partner', lang)}>{copy.partnerLink}</a>.</p>
+    </div>
+    <ContactForm lang={lang} />
+  </section>
+</Base>
+
+<style>
+  .contact { display: grid; grid-template-columns: 1fr 1.3fr; gap: clamp(2rem, 6vw, 6rem); }
+  .contact__info { display: grid; gap: 1.5rem; align-content: start; }
+  h1 { font-size: var(--step-5); }
+  .lead { color: var(--muted); }
+  dl { margin: 0.5rem 0 0; display: grid; gap: 1rem; }
+  dt { font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  dd { margin: 0.15rem 0 0; font-family: var(--serif); font-size: var(--step-1); }
+  dd a { text-decoration: none; }
+  @media (max-width: 860px) { .contact { grid-template-columns: 1fr; } }
+</style>

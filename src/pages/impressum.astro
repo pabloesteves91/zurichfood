@@ -1,0 +1,14 @@
+---
+import LegalView from '../views/LegalView.astro';
+import { SITE } from '../config';
+---
+<LegalView lang="de" page="imprint" title="Impressum" description="Impressum von Zürich Food (zurichfood.ch).">
+  <h2>Verantwortlich für den Inhalt</h2>
+  <p>Laura Wick &amp; Eva Wick<br />Zürich Food<br />[Strasse und Nr. ergänzen]<br />[PLZ] Zürich, Schweiz</p>
+  <h2>Kontakt</h2>
+  <p>E-Mail: <a href={`mailto:${SITE.email}`}>{SITE.email}</a><br />Telefon: {SITE.phone}</p>
+  <h2>Haftungsausschluss</h2>
+  <p>Alle Angaben wie Öffnungszeiten, Preise und Daten wurden sorgfältig recherchiert, erfolgen aber ohne Gewähr. Bitte prüfe sie vor einem Besuch direkt beim jeweiligen Betrieb. Für Inhalte externer Links sind ausschliesslich deren Betreiber verantwortlich.</p>
+  <h2>Urheberrechte</h2>
+  <p>Texte und Fotos auf dieser Webseite gehören Zürich Food, sofern nicht anders angegeben. Die Verwendung ist nur mit schriftlicher Zustimmung erlaubt.</p>
+</LegalView>

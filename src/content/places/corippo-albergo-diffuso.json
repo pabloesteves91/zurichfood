@@ -1,0 +1,21 @@
+{
+  "name": "Corippo Albergo Diffuso",
+  "category": "hotels",
+  "type": "Hotel",
+  "street": "Bassa Corippo 23",
+  "postalCode": "6631",
+  "city": "Corippo",
+  "area": "Tessin",
+  "lat": 46.2357,
+  "lng": 8.8406,
+  "price": 2,
+  "phone": "+41 91 745 18 71",
+  "website": "https://corippoalbergodiffuso.ch/de/",
+  "award": "Hotel Innovation Award 2017",
+  "summary": {
+    "de": "Verstreutes Hotel in alten Rustici im Verzascatal.",
+    "en": "A scattered hotel in old stone rustici in the Verzasca Valley."
+  },
+  "post": "corippo-albergo-diffuso-tessin",
+  "image": "../posts/images/corippo-albergo-diffuso-gasse.jpg"
+}

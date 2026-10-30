@@ -1,0 +1,83 @@
+---
+import { SITE } from '../config';
+import { route } from '../lib/urls';
+import { t, type Lang } from '../i18n';
+
+interface Props { lang: Lang; variant?: 'contact' | 'partner' }
+const { lang, variant = 'contact' } = Astro.props;
+const ui = t(lang);
+const copy = {
+  de: {
+    name: 'Name', email: 'E-Mail', company: 'Betrieb / Marke', topic: 'Anliegen', message: 'Nachricht',
+    topics: variant === 'partner' ? ['Restaurantbesuch', 'Hotelaufenthalt', 'Produktvorstellung', 'Event', 'Anderes'] : ['Kooperation', 'Geheimtipp', 'Feedback', 'Anderes'],
+    send: 'Nachricht senden', consent: 'Deine Angaben verwenden wir nur, um dir zu antworten. Mehr in der',
+    sent: 'Danke! Dein E-Mail-Programm öffnet sich mit der vorbereiteten Nachricht.',
+    ok: 'Danke für deine Nachricht! Wir melden uns persönlich.',
+    fail: 'Das hat leider nicht geklappt. Schreib uns bitte direkt an',
+  },
+  en: {
+    name: 'Name', email: 'Email', company: 'Business / brand', topic: 'Topic', message: 'Message',
+    topics: variant === 'partner' ? ['Restaurant visit', 'Hotel stay', 'Product feature', 'Event', 'Other'] : ['Collaboration', 'Insider tip', 'Feedback', 'Other'],
+    send: 'Send message', consent: 'We only use your details to reply to you. More in our',
+    sent: 'Thank you! Your email app opens with the prepared message.',
+    ok: 'Thanks for your message! We will get back to you personally.',
+    fail: 'Something went wrong. Please write to us directly at',
+  },
+}[lang];
+---
+
+<form class="cform" method="post" action={SITE.contactFormAction || undefined} data-contact data-mode={SITE.contactFormAction ? 'post' : 'mailto'} data-to={SITE.email} data-sent={copy.sent} data-ok={copy.ok} data-fail={`${copy.fail} ${SITE.email}`}>
+  <div class="cform__row">
+    <div class="field"><label for={`c-name-${variant}`}>{copy.name}</label><input class="input" id={`c-name-${variant}`} name="name" autocomplete="name" required /></div>
+    <div class="field"><label for={`c-email-${variant}`}>{copy.email}</label><input class="input" id={`c-email-${variant}`} name="email" type="email" autocomplete="email" required /></div>
+  </div>
+  <div class="cform__row">
+    {variant === 'partner' && <div class="field"><label for={`c-company-${variant}`}>{copy.company}</label><input class="input" id={`c-company-${variant}`} name="company" autocomplete="organization" /></div>}
+    <div class="field">
+      <label for={`c-topic-${variant}`}>{copy.topic}</label>
+      <select class="select" id={`c-topic-${variant}`} name="topic">{copy.topics.map((o) => <option>{o}</option>)}</select>
+    </div>
+  </div>
+  <div class="field"><label for={`c-msg-${variant}`}>{copy.message}</label><textarea class="textarea" id={`c-msg-${variant}`} name="message" required></textarea></div>
+  <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" class="sr-only" aria-hidden="true" />
+  <div class="cform__foot">
+    <button class="btn" type="submit">{copy.send}</button>
+    <p class="meta">{copy.consent} <a href={route('privacy', lang)}>{ui.privacy}</a>.</p>
+  </div>
+  <p class="cform__status" role="status" aria-live="polite"></p>
+</form>
+
+<style>
+  .cform { display: grid; gap: 1.1rem; }
+  .cform__row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.1rem; }
+  .cform__foot { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.5rem; margin-top: 0.5rem; }
+  .cform__foot .meta { flex: 1; min-width: 220px; }
+  .cform__status { color: var(--accent-ink); }
+  .cform__status:empty { display: none; }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLFormElement>('form[data-contact]').forEach((form) => {
+    const status = form.querySelector('.cform__status')!;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      if (fd.get('_gotcha')) return;
+      if (form.dataset.mode === 'mailto') {
+        const subject = `${fd.get('topic')} – ${fd.get('name')}${fd.get('company') ? ` (${fd.get('company')})` : ''}`;
+        const body = `${fd.get('message')}\n\n${fd.get('name')}\n${fd.get('email')}${fd.get('company') ? `\n${fd.get('company')}` : ''}`;
+        location.href = `mailto:${form.dataset.to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        status.textContent = form.dataset.sent!;
+        return;
+      }
+      try {
+        const res = await fetch(form.action, { method: 'POST', body: fd, headers: { Accept: 'application/json' } });
+        if (!res.ok) throw new Error();
+        form.reset();
+        status.textContent = form.dataset.ok!;
+      } catch {
+        status.textContent = form.dataset.fail!;
+      }
+    });
+  });
+</script>

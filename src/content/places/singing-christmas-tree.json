@@ -1,0 +1,16 @@
+{
+  "name": "Singing Christmas Tree",
+  "category": "erlebnisse",
+  "type": "Event",
+  "street": "Werdmühleplatz",
+  "postalCode": "8001",
+  "city": "Zürich",
+  "area": "Kreis 1",
+  "lat": 47.3746,
+  "lng": 8.5376,
+  "summary": {
+    "de": "Singender Weihnachtsbaum mit täglichen Chorauftritten.",
+    "en": "A singing Christmas tree with daily choir performances."
+  },
+  "post": "weihnachtsmaerkte-zuerich"
+}

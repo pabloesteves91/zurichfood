@@ -1,0 +1,21 @@
+{
+  "name": "Restaurant Anna",
+  "category": "food",
+  "type": "Restaurant",
+  "street": "Anna-Heer-Strasse 2",
+  "postalCode": "8057",
+  "city": "Zürich",
+  "area": "Kreis 6",
+  "lat": 47.3925,
+  "lng": 8.544,
+  "cuisine": "Mediterran",
+  "price": 3,
+  "phone": "+41 44 552 87 44",
+  "website": "https://www.restaurant-anna.ch",
+  "summary": {
+    "de": "Locker, kreativ, mediterran-italienisch.",
+    "en": "Relaxed, creative, Mediterranean-Italian."
+  },
+  "post": "gourmet-restaurants-schweiz",
+  "image": "../posts/images/gourmet-restaurant-anna-zuerich-gastraum.jpg"
+}

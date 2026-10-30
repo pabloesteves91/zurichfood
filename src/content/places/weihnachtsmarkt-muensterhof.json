@@ -1,0 +1,16 @@
+{
+  "name": "Weihnachtsmarkt Münsterhof",
+  "category": "erlebnisse",
+  "type": "Event",
+  "street": "Münsterhof",
+  "postalCode": "8001",
+  "city": "Zürich",
+  "area": "Kreis 1",
+  "lat": 47.37,
+  "lng": 8.5414,
+  "summary": {
+    "de": "Ruhiger Markt mit Zürcher Brands, ideal für Geschenke.",
+    "en": "Quiet market with Zurich brands, ideal for gifts."
+  },
+  "post": "weihnachtsmaerkte-zuerich"
+}

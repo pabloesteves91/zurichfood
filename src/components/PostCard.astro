@@ -1,0 +1,26 @@
+---
+import { Image } from 'astro:assets';
+import { CATEGORY_META } from '../i18n';
+import type { Post } from '../lib/posts';
+import { formatDate } from '../lib/posts';
+import { postLang, postUrl } from '../lib/urls';
+
+interface Props { post: Post; eager?: boolean; headingLevel?: 'h2' | 'h3' }
+const { post, eager = false, headingLevel = 'h3' } = Astro.props;
+const lang = postLang(post);
+const H = headingLevel;
+---
+
+<article class="reveal">
+  <a class="card" href={postUrl(post)}>
+    <div class="card__media">
+      <Image src={post.data.image} alt={post.data.imageAlt} widths={[400, 640, 900]} sizes="(max-width: 700px) 92vw, 400px" loading={eager ? 'eager' : 'lazy'} />
+    </div>
+    <div>
+      <p class="kicker">{CATEGORY_META[post.data.category].name[lang]}</p>
+      <H class="card__title" style="margin-top:.5rem">{post.data.title}</H>
+      <p class="card__text" style="margin-top:.6rem">{post.data.description}</p>
+      <p class="meta" style="margin-top:.75rem"><time datetime={post.data.date.toISOString()}>{formatDate(post.data.date, lang)}</time></p>
+    </div>
+  </a>
+</article>

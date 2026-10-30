@@ -1,0 +1,71 @@
+---
+import Base from '../layouts/Base.astro';
+import PostCard from '../components/PostCard.astro';
+import Newsletter from '../components/Newsletter.astro';
+import { SITE } from '../config';
+import { CATEGORY_META, t, type Category, type Lang } from '../i18n';
+import { getPosts } from '../lib/posts';
+import { absolute, categoryPath, postUrl, route, withBase } from '../lib/urls';
+import { breadcrumbs } from '../lib/schema';
+
+interface Props { lang: Lang; category: Category }
+const { lang, category } = Astro.props;
+const ui = t(lang);
+const meta = CATEGORY_META[category];
+const posts = await getPosts(lang, category);
+const path = categoryPath(category, lang);
+
+const jsonLd = [
+  breadcrumbs([
+    { name: ui.home, url: absolute(route('home', lang), Astro.site) },
+    { name: meta.name[lang], url: absolute(withBase(path), Astro.site) },
+  ]),
+  {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: meta.seoTitle[lang],
+    description: meta.intro[lang],
+    url: absolute(withBase(path), Astro.site),
+    mainEntity: {
+      '@type': 'ItemList',
+      itemListElement: posts.map((p, i) => ({ '@type': 'ListItem', position: i + 1, url: absolute(postUrl(p), Astro.site), name: p.data.title })),
+    },
+  },
+];
+---
+
+<Base
+  lang={lang}
+  title={meta.seoTitle[lang]}
+  description={meta.intro[lang]}
+  alternates={{ de: categoryPath(category, 'de'), en: categoryPath(category, 'en') }}
+  jsonLd={jsonLd}
+>
+  <header class="wrap page-head">
+    <nav class="breadcrumbs" aria-label="Breadcrumb" style="display:flex;justify-content:center">
+      <ol><li><a href={route('home', lang)}>{ui.home}</a></li><li aria-current="page">{meta.name[lang]}</li></ol>
+    </nav>
+    <h1>{meta.name[lang]}</h1>
+    <p class="lead">{meta.intro[lang]}</p>
+  </header>
+  <div class="wrap"><hr class="rule" /></div>
+  <section class="wrap section">
+    {posts.length > 0 ? (
+      <div class="grid grid--3">
+        {posts.map((p, i) => <PostCard post={p} eager={i < 3} headingLevel="h2" />)}
+      </div>
+    ) : (
+      <div class="empty">
+        <p class="kicker">{ui.comingSoon}</p>
+        <p class="empty__text">{ui.noPosts}</p>
+        <a class="btn btn--ghost" href={SITE.instagram} rel="noopener" target="_blank">{SITE.instagramHandle}</a>
+      </div>
+    )}
+  </section>
+  <Newsletter lang={lang} />
+</Base>
+
+<style>
+  .empty { text-align: center; padding-block: 3rem; display: grid; gap: 1.25rem; justify-items: center; }
+  .empty__text { font-family: var(--serif); font-size: var(--step-2); max-width: 32rem; }
+</style>

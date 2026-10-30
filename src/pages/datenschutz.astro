@@ -1,0 +1,21 @@
+---
+import LegalView from '../views/LegalView.astro';
+import { SITE } from '../config';
+---
+<LegalView lang="de" page="privacy" title="Datenschutz" description="Datenschutzerklärung von Zürich Food nach dem Schweizer Datenschutzgesetz (DSG).">
+  <p><em>Vorlage, bitte vor dem Livegang rechtlich prüfen lassen.</em></p>
+  <h2>Verantwortliche</h2>
+  <p>Laura Wick &amp; Eva Wick, Zürich Food, <a href={`mailto:${SITE.email}`}>{SITE.email}</a>. Diese Erklärung richtet sich nach dem Schweizer Datenschutzgesetz (DSG).</p>
+  <h2>Keine Cookies, kein Tracking</h2>
+  <p>Diese Webseite setzt keine Cookies und verwendet keine Analyse- oder Werbe-Tools. Schriften werden lokal ausgeliefert, es werden keine Daten an Google Fonts übertragen.</p>
+  <h2>Hosting</h2>
+  <p>Die Webseite wird bei GitHub Pages (GitHub Inc., USA) gehostet. Beim Aufruf verarbeitet der Hoster technisch notwendige Daten wie IP-Adresse, Datum und aufgerufene Seite in Server-Logfiles.</p>
+  <h2>Karte</h2>
+  <p>Die Karte nutzt Kartenkacheln von OpenStreetMap. Beim Laden der Karte wird deine IP-Adresse an die OpenStreetMap Foundation übertragen. Die Karte wird nur auf der Kartenseite geladen.</p>
+  <h2>Kontaktformular und E-Mail</h2>
+  <p>Wenn du uns kontaktierst, verwenden wir deine Angaben ausschliesslich zur Bearbeitung deiner Anfrage und löschen sie, wenn sie nicht mehr benötigt werden.</p>
+  <h2>Newsletter</h2>
+  <p>Für den Newsletter speichern wir deine E-Mail-Adresse beim Versanddienst [Anbieter ergänzen]. Du kannst dich jederzeit über den Link in jeder Ausgabe abmelden.</p>
+  <h2>Deine Rechte</h2>
+  <p>Du hast das Recht auf Auskunft, Berichtigung und Löschung deiner Daten. Schreib uns dazu an <a href={`mailto:${SITE.email}`}>{SITE.email}</a>.</p>
+</LegalView>

@@ -1,0 +1,16 @@
+{
+  "name": "Weihnachtsmarkt im Hauptbahnhof",
+  "category": "erlebnisse",
+  "type": "Event",
+  "street": "Bahnhofplatz",
+  "postalCode": "8001",
+  "city": "Zürich",
+  "area": "Kreis 1",
+  "lat": 47.378,
+  "lng": 8.5402,
+  "summary": {
+    "de": "Überdachter Markt in der Bahnhofshalle, ideal bei Regen.",
+    "en": "Covered market in the station hall, perfect on rainy days."
+  },
+  "post": "weihnachtsmaerkte-zuerich"
+}

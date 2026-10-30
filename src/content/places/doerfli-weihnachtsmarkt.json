@@ -1,0 +1,16 @@
+{
+  "name": "Dörfli-Weihnachtsmarkt",
+  "category": "erlebnisse",
+  "type": "Event",
+  "street": "Niederdorfstrasse",
+  "postalCode": "8001",
+  "city": "Zürich",
+  "area": "Kreis 1",
+  "lat": 47.3729,
+  "lng": 8.5441,
+  "summary": {
+    "de": "Traditionsmarkt in den Gassen des Niederdorfs.",
+    "en": "Traditional market in the lanes of the Old Town."
+  },
+  "post": "weihnachtsmaerkte-zuerich"
+}

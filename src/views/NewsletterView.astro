@@ -1,0 +1,20 @@
+---
+import Base from '../layouts/Base.astro';
+import Newsletter from '../components/Newsletter.astro';
+import { ROUTES, type Lang } from '../i18n';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const copy = {
+  de: { title: 'Newsletter', description: 'Der Zürich Food Newsletter: einmal im Monat die besten neuen Restaurants, Hotels und Erlebnisse in Zürich, direkt in dein Postfach.' },
+  en: { title: 'Newsletter', description: 'The Zürich Food newsletter: once a month, the best new restaurants, hotels and experiences in Zurich, straight to your inbox.' },
+}[lang];
+---
+
+<Base lang={lang} title={copy.title} description={copy.description} alternates={{ de: ROUTES.newsletter.de, en: ROUTES.newsletter.en }}>
+  <h1 class="sr-only">{copy.title}</h1>
+  <div class="spacer"></div>
+  <Newsletter lang={lang} variant="inline" />
+  <div class="spacer"></div>
+</Base>
+<style>.spacer { height: clamp(2rem, 8vw, 6rem); }</style>

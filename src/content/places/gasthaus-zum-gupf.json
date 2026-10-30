@@ -1,0 +1,22 @@
+{
+  "name": "Gasthaus zum Gupf",
+  "category": "food",
+  "type": "Restaurant",
+  "street": "Gupf 21",
+  "postalCode": "9038",
+  "city": "Rehetobel",
+  "area": "Appenzellerland",
+  "lat": 47.4241,
+  "lng": 9.4917,
+  "cuisine": "Gourmet",
+  "price": 4,
+  "phone": "+41 71 877 11 10",
+  "website": "https://www.gupf.ch",
+  "award": "1 Michelin-Stern",
+  "summary": {
+    "de": "Holzhaus auf 1083 m mit riesigem Weinkeller.",
+    "en": "Wooden inn at 1,083 m with a vast wine cellar."
+  },
+  "post": "gourmet-restaurants-schweiz",
+  "image": "../posts/images/gourmet-gupf-rehetobel-hauptgang.jpg"
+}

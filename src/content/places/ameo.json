@@ -1,0 +1,22 @@
+{
+  "name": "AMEO",
+  "category": "food",
+  "type": "Restaurant",
+  "street": "Zentralstrasse 36",
+  "postalCode": "8003",
+  "city": "Zürich",
+  "area": "Kreis 3",
+  "lat": 47.3711,
+  "lng": 8.5203,
+  "cuisine": "Fine Dining",
+  "price": 3,
+  "phone": "+41 44 620 01 80",
+  "website": "https://www.ameo-restaurant.ch",
+  "award": "15 Gault-Millau-Punkte",
+  "summary": {
+    "de": "Kunst trifft Fine Dining, mit wechselnden Künstlern.",
+    "en": "Fine dining meets art, with rotating artists."
+  },
+  "post": "gourmet-restaurants-schweiz",
+  "image": "../posts/images/gourmet-ameo-zuerich-gericht.jpg"
+}

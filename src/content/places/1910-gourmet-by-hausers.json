@@ -1,0 +1,22 @@
+{
+  "name": "1910 Gourmet by Hausers",
+  "category": "food",
+  "type": "Restaurant",
+  "street": "Dorfstrasse 53",
+  "postalCode": "3818",
+  "city": "Grindelwald",
+  "area": "Berner Oberland",
+  "lat": 46.6241,
+  "lng": 8.0359,
+  "cuisine": "Gourmet",
+  "price": 4,
+  "phone": "+41 33 888 99 99",
+  "website": "https://www.gourmet-1910.ch",
+  "award": "1 Michelin-Stern, 16 Gault-Millau-Punkte",
+  "summary": {
+    "de": "Sechs Tische im Stübli mit dem Herd von 1910.",
+    "en": "Six tables in a parlour built around a 1910 stove."
+  },
+  "post": "gourmet-restaurants-schweiz",
+  "image": "../posts/images/gourmet-1910-grindelwald-stuebli.jpg"
+}

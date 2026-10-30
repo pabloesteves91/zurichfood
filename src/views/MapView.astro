@@ -1,0 +1,356 @@
+---
+import { getCollection } from 'astro:content';
+import { getImage } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import { CATEGORIES, CATEGORY_META, ROUTES, t, type Lang } from '../i18n';
+import { getPosts } from '../lib/posts';
+import { absolute, postKey, postUrl, route } from '../lib/urls';
+import { breadcrumbs, placeSchema } from '../lib/schema';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const ui = t(lang);
+const posts = await getPosts(lang);
+const places = (await getCollection('places')).sort((a, b) => a.data.name.localeCompare(b.data.name));
+
+const items = await Promise.all(
+  places.map(async (p) => {
+    const post = posts.find((x) => postKey(x) === p.data.post);
+    const src = p.data.image ?? post?.data.image;
+    const thumb = src ? await getImage({ src, width: 160, height: 160, fit: 'cover', format: 'webp' }) : null;
+    return {
+      id: p.id,
+      name: p.data.name,
+      category: p.data.category,
+      categoryName: CATEGORY_META[p.data.category].name[lang],
+      area: p.data.area,
+      cuisine: p.data.cuisine ?? '',
+      price: p.data.price ?? 0,
+      lat: p.data.lat,
+      lng: p.data.lng,
+      address: `${p.data.street}, ${p.data.postalCode} ${p.data.city}`,
+      summary: p.data.summary[lang],
+      url: post ? postUrl(post) : '',
+      thumb: thumb?.src ?? '',
+    };
+  }),
+);
+
+const areaOrder = (a: string) => (/^Kreis (\d+)/.exec(a)?.[1] ? Number(/^Kreis (\d+)/.exec(a)![1]) : 100);
+const areas = [...new Set(items.map((i) => i.area))].sort((a, b) => areaOrder(a) - areaOrder(b) || a.localeCompare(b));
+const cuisines = [...new Set(items.map((i) => i.cuisine).filter(Boolean))].sort();
+
+const copy = {
+  de: {
+    title: 'Karte: Restaurants, Hotels & Erlebnisse in Zürich',
+    description: 'Alle von Zürich Food empfohlenen Restaurants, Hotels, Stores und Erlebnisse auf einer Karte. Filtere nach Kreis, Küche und Preis.',
+    h1: 'Karte',
+    all: 'Alle',
+    area: 'Kreis / Region',
+    cuisine: 'Küche',
+    price: 'Preis',
+    any: 'Alle',
+    results: (n: number) => `${n} ${n === 1 ? 'Adresse' : 'Adressen'}`,
+    reset: 'Filter zurücksetzen',
+    none: 'Keine Adressen für diese Filter.',
+    list: 'Liste',
+    map: 'Karte',
+    read: 'Zum Beitrag',
+  },
+  en: {
+    title: 'Map: Restaurants, Hotels & Things to Do in Zurich',
+    description: 'Every restaurant, hotel, store and experience recommended by Zürich Food on one map. Filter by district, cuisine and price.',
+    h1: 'Map',
+    all: 'All',
+    area: 'District / region',
+    cuisine: 'Cuisine',
+    price: 'Price',
+    any: 'Any',
+    results: (n: number) => `${n} ${n === 1 ? 'place' : 'places'}`,
+    reset: 'Reset filters',
+    none: 'No places match these filters.',
+    list: 'List',
+    map: 'Map',
+    read: 'Read the story',
+  },
+}[lang];
+
+const jsonLd = [
+  breadcrumbs([
+    { name: ui.home, url: absolute(route('home', lang), Astro.site) },
+    { name: copy.h1, url: absolute(route('map', lang), Astro.site) },
+  ]),
+  {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: copy.title,
+    itemListElement: places.map((p, i) => ({ '@type': 'ListItem', position: i + 1, item: placeSchema(p.data) })),
+  },
+];
+---
+
+<Base lang={lang} title={copy.title} description={copy.description} alternates={{ de: ROUTES.map.de, en: ROUTES.map.en }} jsonLd={jsonLd} bodyClass="is-map">
+  <div class="mapview" data-mapview data-view="list">
+    <aside class="panel">
+      <header class="panel__head">
+        <h1>{copy.h1}</h1>
+        <p class="meta" data-count aria-live="polite">{copy.results(items.length)}</p>
+      </header>
+
+      <form class="filters" data-filters onsubmit="return false">
+        <div class="chips" role="group" aria-label={lang === 'de' ? 'Rubrik' : 'Section'}>
+          <button type="button" class="chip" data-cat="" aria-pressed="true">{copy.all}</button>
+          {CATEGORIES.filter((c) => items.some((i) => i.category === c)).map((c) => (
+            <button type="button" class="chip" data-cat={c} aria-pressed="false">{CATEGORY_META[c].name[lang]}</button>
+          ))}
+        </div>
+        <div class="filters__row">
+          <div class="field">
+            <label for="f-area">{copy.area}</label>
+            <select class="select" id="f-area" name="area">
+              <option value="">{copy.any}</option>
+              {areas.map((a) => <option value={a}>{a}</option>)}
+            </select>
+          </div>
+          <div class="field">
+            <label for="f-cuisine">{copy.cuisine}</label>
+            <select class="select" id="f-cuisine" name="cuisine">
+              <option value="">{copy.any}</option>
+              {cuisines.map((c) => <option value={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <span class="field__label" id="price-label">{copy.price}</span>
+          <div class="chips" role="group" aria-labelledby="price-label">
+            {[1, 2, 3, 4].map((n) => (
+              <button type="button" class="chip" data-price={n} aria-pressed="false" title={ui.priceLevels[n - 1]}>{'$'.repeat(n)}</button>
+            ))}
+          </div>
+        </div>
+        <button type="button" class="reset" data-reset>{copy.reset}</button>
+      </form>
+
+      <ol class="results" data-results>
+        {items.map((it) => (
+          <li class="result" data-id={it.id}>
+            <button type="button" class="result__btn" data-focus={it.id}>
+              {it.thumb ? <img src={it.thumb} alt="" width="80" height="80" loading="lazy" /> : <span class="result__ph"></span>}
+              <span class="result__body">
+                <span class="kicker">{it.categoryName} · {it.area}</span>
+                <span class="result__name">{it.name}</span>
+                <span class="result__sum">{it.summary}</span>
+              </span>
+            </button>
+            {it.url && <a class="result__link" href={it.url}>{copy.read} →</a>}
+          </li>
+        ))}
+      </ol>
+      <p class="empty" data-empty hidden>{copy.none}</p>
+    </aside>
+
+    <div class="map" id="map" role="region" aria-label={copy.map}></div>
+
+    <div class="toggle" role="group">
+      <button type="button" class="chip" data-show="list" aria-pressed="true">{copy.list}</button>
+      <button type="button" class="chip" data-show="map" aria-pressed="false">{copy.map}</button>
+    </div>
+  </div>
+
+  <script type="application/json" id="map-data" set:html={JSON.stringify({ items, read: copy.read })} />
+  <script type="application/json" id="map-i18n" set:html={JSON.stringify({ one: copy.results(1).replace('1', '{n}'), many: copy.results(2).replace('2', '{n}') })} />
+</Base>
+
+<style>
+  :global(body.is-map) { overflow: hidden; }
+  :global(body.is-map .site-footer) { display: none; }
+  .mapview { display: grid; grid-template-columns: minmax(340px, 440px) 1fr; height: calc(100dvh - 76px); border-top: 1px solid var(--line); }
+  .panel { overflow-y: auto; border-right: 1px solid var(--line); padding: 2rem var(--gutter) 3rem; }
+  .panel__head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+  .panel__head h1 { font-size: var(--step-4); }
+  .filters { display: grid; gap: 1.1rem; margin-top: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--text); }
+  .filters__row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  .field__label { font-size: var(--step--1); font-weight: 500; }
+  .chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .reset { justify-self: start; background: none; border: 0; padding: 0; font: inherit; font-size: 0.85rem; text-decoration: underline; text-underline-offset: 0.2em; cursor: pointer; color: var(--muted); }
+  .results { list-style: none; margin: 0; padding: 0; }
+  .result { border-bottom: 1px solid var(--line); padding-block: 1rem; }
+  .result[hidden] { display: none; }
+  .result.is-active .result__name { color: var(--accent); }
+  .result__btn { display: grid; grid-template-columns: 80px 1fr; gap: 1rem; text-align: left; width: 100%; background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+  .result__btn img, .result__ph { width: 80px; height: 80px; object-fit: cover; background: var(--paper); }
+  .result__body { display: grid; gap: 0.25rem; align-content: start; }
+  .result__name { font-family: var(--serif); font-size: 1.3rem; line-height: 1.2; }
+  .result__sum { font-size: 0.88rem; color: var(--muted); }
+  .result__link { display: inline-block; margin: 0.5rem 0 0 96px; font-size: 0.85rem; font-weight: 500; text-decoration: none; }
+  .empty { padding-block: 2rem; color: var(--muted); }
+  .map { position: relative; z-index: 0; background: #eae6df; }
+  .toggle { display: none; }
+
+  @media (max-width: 1080px) { .mapview { height: calc(100dvh - 64px); } }
+  @media (max-width: 860px) {
+    .mapview { grid-template-columns: 1fr; position: relative; }
+    .panel { border-right: 0; padding-bottom: 6rem; }
+    .map { position: absolute; inset: 0; visibility: hidden; }
+    .mapview[data-view='map'] .map { visibility: visible; }
+    .mapview[data-view='map'] .panel { visibility: hidden; }
+    .toggle {
+      display: flex; gap: 0.25rem; position: absolute; left: 50%; bottom: 1.25rem; transform: translateX(-50%); z-index: 500;
+      background: var(--surface); padding: 0.3rem; border-radius: 999px; box-shadow: 0 6px 24px rgb(0 0 0 / 0.14);
+    }
+    .toggle .chip { border: 0; }
+  }
+</style>
+
+<script>
+  import L from 'leaflet';
+  import 'leaflet/dist/leaflet.css';
+
+  type Item = { id: string; name: string; category: string; categoryName: string; area: string; cuisine: string; price: number; lat: number; lng: number; address: string; summary: string; url: string; thumb: string };
+  const { items, read } = JSON.parse(document.getElementById('map-data')!.textContent!) as { items: Item[]; read: string };
+  const i18n = JSON.parse(document.getElementById('map-i18n')!.textContent!) as { one: string; many: string };
+  const root = document.querySelector<HTMLElement>('[data-mapview]')!;
+  const form = root.querySelector<HTMLFormElement>('[data-filters]')!;
+  const area = form.querySelector<HTMLSelectElement>('#f-area')!;
+  const cuisine = form.querySelector<HTMLSelectElement>('#f-cuisine')!;
+  const count = root.querySelector('[data-count]')!;
+  const empty = root.querySelector<HTMLElement>('[data-empty]')!;
+
+  const state = { cat: '', area: '', cuisine: '', price: new Set<number>() };
+  const params = new URLSearchParams(location.search);
+  state.cat = params.get('cat') ?? '';
+  state.area = params.get('area') ?? '';
+  state.cuisine = params.get('cuisine') ?? '';
+  (params.get('price') ?? '').split(',').filter(Boolean).forEach((p) => state.price.add(Number(p)));
+
+  const map = L.map('map', { zoomControl: false, scrollWheelZoom: true, attributionControl: true });
+  L.control.zoom({ position: 'topright' }).addTo(map);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    className: 'tiles',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  }).addTo(map);
+
+  const icon = (active = false) =>
+    L.divIcon({ className: `pin${active ? ' pin--active' : ''}`, html: '<span></span>', iconSize: [22, 22], iconAnchor: [11, 11], popupAnchor: [0, -12] });
+
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+  const markers = new Map<string, L.Marker>();
+  items.forEach((it) => {
+    const m = L.marker([it.lat, it.lng], { icon: icon(), title: it.name, alt: it.name });
+    m.bindPopup(
+      `<div class="pop"><p class="pop__kicker">${esc(it.categoryName)} · ${esc(it.area)}</p><p class="pop__name">${esc(it.name)}</p><p class="pop__addr">${esc(it.address)}</p><p class="pop__sum">${esc(it.summary)}</p>${it.url ? `<a href="${it.url}">${esc(read)} →</a>` : ''}</div>`,
+      { maxWidth: 260 },
+    );
+    m.on('click', () => setActive(it.id, false));
+    markers.set(it.id, m);
+  });
+
+  let active = '';
+  function setActive(id: string, fly = true) {
+    if (active && markers.get(active)) markers.get(active)!.setIcon(icon());
+    root.querySelectorAll('.result.is-active').forEach((el) => el.classList.remove('is-active'));
+    active = id;
+    const m = markers.get(id);
+    if (!m) return;
+    m.setIcon(icon(true));
+    m.setZIndexOffset(1000);
+    const li = root.querySelector<HTMLElement>(`.result[data-id="${CSS.escape(id)}"]`);
+    li?.classList.add('is-active');
+    if (fly) {
+      map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 15), { duration: 0.6 });
+      m.openPopup();
+    } else li?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function matches(it: Item) {
+    return (!state.cat || it.category === state.cat)
+      && (!state.area || it.area === state.area)
+      && (!state.cuisine || it.cuisine === state.cuisine)
+      && (state.price.size === 0 || state.price.has(it.price));
+  }
+
+  let first = true;
+  function apply() {
+    const visible = items.filter(matches);
+    const group: L.LatLng[] = [];
+    items.forEach((it) => {
+      const m = markers.get(it.id)!;
+      const show = visible.includes(it);
+      root.querySelector<HTMLElement>(`.result[data-id="${CSS.escape(it.id)}"]`)!.hidden = !show;
+      if (show) { m.addTo(map); group.push(m.getLatLng()); } else m.remove();
+    });
+    count.textContent = (visible.length === 1 ? i18n.one : i18n.many).replace('{n}', String(visible.length));
+    empty.hidden = visible.length > 0;
+    if (group.length) map.fitBounds(L.latLngBounds(group), { padding: [48, 48], maxZoom: 14, animate: !first });
+    else if (first) map.setView([47.3769, 8.5417], 13);
+    first = false;
+
+    // sync UI + URL
+    form.querySelectorAll<HTMLButtonElement>('[data-cat]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.cat === state.cat)));
+    form.querySelectorAll<HTMLButtonElement>('[data-price]').forEach((b) => b.setAttribute('aria-pressed', String(state.price.has(Number(b.dataset.price)))));
+    area.value = state.area;
+    cuisine.value = state.cuisine;
+    const q = new URLSearchParams();
+    if (state.cat) q.set('cat', state.cat);
+    if (state.area) q.set('area', state.area);
+    if (state.cuisine) q.set('cuisine', state.cuisine);
+    if (state.price.size) q.set('price', [...state.price].sort().join(','));
+    history.replaceState(null, '', `${location.pathname}${q.size ? `?${q}` : ''}`);
+  }
+
+  form.addEventListener('click', (e) => {
+    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
+    if (!b) return;
+    if (b.dataset.cat !== undefined) state.cat = b.dataset.cat;
+    else if (b.dataset.price) {
+      const n = Number(b.dataset.price);
+      state.price.has(n) ? state.price.delete(n) : state.price.add(n);
+    } else if (b.hasAttribute('data-reset')) {
+      state.cat = state.area = state.cuisine = '';
+      state.price.clear();
+    } else return;
+    apply();
+  });
+  area.addEventListener('change', () => { state.area = area.value; apply(); });
+  cuisine.addEventListener('change', () => { state.cuisine = cuisine.value; apply(); });
+
+  root.querySelectorAll<HTMLButtonElement>('[data-focus]').forEach((b) =>
+    b.addEventListener('click', () => { setView('map'); setActive(b.dataset.focus!); }),
+  );
+
+  function setView(v: 'list' | 'map') {
+    root.dataset.view = v;
+    root.querySelectorAll<HTMLButtonElement>('[data-show]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.show === v)));
+    if (v === 'map') setTimeout(() => map.invalidateSize(), 50);
+  }
+  root.querySelectorAll<HTMLButtonElement>('[data-show]').forEach((b) => b.addEventListener('click', () => setView(b.dataset.show as 'list' | 'map')));
+
+  apply();
+  const focus = params.get('place');
+  if (focus && markers.has(focus)) {
+    if (window.matchMedia('(max-width: 860px)').matches) setView('map');
+    setTimeout(() => setActive(focus), 300);
+  }
+</script>
+
+<style is:global>
+  .pin span {
+    display: block; width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent); border: 3px solid #fff; box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+    transition: transform 0.2s var(--ease), background 0.2s;
+  }
+  .pin:hover span { transform: scale(1.15); }
+  .pin--active span { background: var(--text); transform: scale(1.25); }
+  .tiles { filter: grayscale(1) sepia(0.12) brightness(1.04) contrast(0.92); }
+  .leaflet-container { font-family: var(--sans); background: #eae6df; }
+  .leaflet-popup-content-wrapper { border-radius: 2px; box-shadow: 0 10px 30px rgb(0 0 0 / 0.15); }
+  .leaflet-popup-content { margin: 1rem 1.1rem; line-height: 1.45; }
+  .pop p { margin: 0; }
+  .pop__kicker { font-size: 0.66rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  .pop__name { font-family: var(--serif); font-size: 1.25rem; margin-top: 0.3rem !important; }
+  .pop__addr { font-size: 0.8rem; color: var(--muted); margin-top: 0.2rem !important; }
+  .pop__sum { font-size: 0.88rem; margin-top: 0.5rem !important; }
+  .pop a { display: inline-block; margin-top: 0.6rem; font-weight: 500; color: var(--text); text-decoration: none; }
+  .leaflet-control-zoom a { border-radius: 0 !important; color: var(--text); }
+</style>

@@ -1,0 +1,77 @@
+---
+import { Image } from 'astro:assets';
+import logo from '../assets/brand/logo.jpg';
+import { SITE } from '../config';
+import { CATEGORIES, CATEGORY_META, ROUTES, t, otherLang, type Lang } from '../i18n';
+import { categoryUrl, route, withBase } from '../lib/urls';
+
+interface Props { lang: Lang; alternates: Partial<Record<Lang, string>> }
+const { lang, alternates } = Astro.props;
+const ui = t(lang);
+const other = otherLang(lang);
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="wrap footer__grid">
+    <div class="footer__brand">
+      <Image src={logo} alt="" width={72} height={72} class="footer__logo" />
+      <p class="footer__name">Zürich Food</p>
+      <p class="footer__tag">{SITE.tagline[lang]}</p>
+      <a class="footer__ig" href={SITE.instagram} rel="me noopener" target="_blank">{ui.followUs} · {SITE.instagramHandle}</a>
+    </div>
+    <nav aria-label={lang === 'de' ? 'Rubriken' : 'Sections'}>
+      <p class="kicker">{lang === 'de' ? 'Rubriken' : 'Sections'}</p>
+      <ul>
+        {CATEGORIES.map((c) => <li><a href={categoryUrl(c, lang)}>{CATEGORY_META[c].name[lang]}</a></li>)}
+        <li><a href={route('map', lang)}>{ui.map}</a></li>
+      </ul>
+    </nav>
+    <nav aria-label="Zürich Food">
+      <p class="kicker">Zürich Food</p>
+      <ul>
+        <li><a href={route('about', lang)}>{ui.about}</a></li>
+        <li><a href={route('partner', lang)}>{ui.partner}</a></li>
+        <li><a href={route('contact', lang)}>{ui.contact}</a></li>
+        <li><a href={route('newsletter', lang)}>{ui.newsletter}</a></li>
+        <li><a href={route('search', lang)}>{ui.search}</a></li>
+      </ul>
+    </nav>
+    <div>
+      <p class="kicker">{ui.contact}</p>
+      <ul>
+        <li><a href={`mailto:${SITE.email}`}>{SITE.email}</a></li>
+        <li><a href={`tel:${SITE.phoneIntl}`}>{SITE.phone}</a></li>
+        <li><a href={withBase(alternates[other] ?? ROUTES.home[other])} hreflang={other} lang={other}>{ui.langSwitch}</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="wrap footer__bottom">
+    <p>© {year} Zürich Food · Laura &amp; Eva Wick</p>
+    <p><a href={route('imprint', lang)}>{ui.imprint}</a> · <a href={route('privacy', lang)}>{ui.privacy}</a></p>
+  </div>
+</footer>
+
+<style>
+  .site-footer { background: var(--text); color: #d9d4ca; margin-top: 0; }
+  .site-footer a { text-decoration: none; }
+  .site-footer a:hover { color: #fff; }
+  .site-footer .kicker { color: #c8a868; margin-bottom: 1rem; }
+  .footer__grid {
+    display: grid; grid-template-columns: 1.6fr 1fr 1fr 1.2fr; gap: 2.5rem;
+    padding-block: clamp(3.5rem, 7vw, 5.5rem) 3rem;
+  }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.55rem; font-size: 0.95rem; }
+  .footer__logo { border-radius: 50%; width: 56px; height: 56px; object-fit: cover; }
+  .footer__name { font-family: var(--serif); font-size: 2rem; color: #fff; margin-top: 1.25rem; line-height: 1; }
+  .footer__tag { font-size: 0.85rem; letter-spacing: 0.08em; margin-top: 0.6rem; }
+  .footer__ig { display: inline-block; margin-top: 1.5rem; font-size: 0.9rem; border-bottom: 1px solid #5b5750; padding-bottom: 0.2rem; }
+  .footer__bottom {
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem;
+    padding-block: 1.5rem 2rem; border-top: 1px solid #36342f; font-size: 0.8rem; color: #9f998e;
+  }
+  @media (max-width: 860px) {
+    .footer__grid { grid-template-columns: 1fr 1fr; }
+    .footer__brand { grid-column: 1 / -1; }
+  }
+</style>
