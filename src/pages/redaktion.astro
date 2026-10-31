@@ -605,7 +605,8 @@ const PLACE_TYPES = [
             out.push(items.join('\n'));
             return;
           }
-          if (t) out.push(t);
+          // Normaler Absatz: «2. …» oder «- …» am Anfang nicht als Liste/Titel deuten
+          if (t) out.push(t.replace(/^(\d+)\. /, '$1\\. ').replace(/^([-+*>#]) /, '\\$1 '));
         });
         return out.join('\n\n');
       }
