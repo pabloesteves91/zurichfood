@@ -14,13 +14,16 @@ npm run preview
 
 ## Inhalte pflegen
 
-- **CMS:** `/admin/` (Sveltia CMS). Login mit einem GitHub Personal Access Token
-  (fine-grained, nur dieses Repository, Berechtigung *Contents: Read and write*).
-  Jede Änderung wird als Commit gespeichert und automatisch veröffentlicht.
-- **Beiträge:** `src/content/posts/de/*.md` und `src/content/posts/en/*.md`.
-  Gleicher Dateiname = Übersetzung (für hreflang).
-- **Adressen (Karte):** `src/content/places/*.json`
-- **Bilder:** `src/content/posts/images/` (werden automatisch zu WebP/AVIF optimiert)
+- **Redaktion (einfach):** `/redaktion/`: neuen Beitrag schreiben, Titelbild hochladen, „Veröffentlichen“.
+  Der Beitrag wird direkt auf `main` gespeichert, GitHub Actions baut die Seite neu (ca. 1–2 Min.).
+  Die Seite ist nicht verlinkt, nicht in der Sitemap und auf `noindex`. Schreiben kann nur,
+  wer einen GitHub-Token mit Zugriff auf dieses Repository hat.
+- **Erweiterter Editor:** `/admin/` (Sveltia CMS): bestehende Beiträge und Adressen bearbeiten.
+- **Token anlegen:** github.com → Settings → Developer settings → Personal access tokens →
+  Fine-grained tokens → Generate new token → Repository: nur `zurichfood` →
+  Permissions: *Contents: Read and write*.
+- **Dateien:** Beiträge `src/content/posts/de|en/*.md` (gleicher Dateiname = Übersetzung),
+  Adressen `src/content/places/*.json`, Bilder `src/content/posts/images/`.
 - **Einstellungen** (E-Mail, Newsletter, Formulare, Kennzahlen): `src/config.ts`
 
 ## SEO
@@ -32,20 +35,16 @@ npm run preview
 
 ## Deployment
 
-GitHub Pages: **Settings → Pages → Deploy from a branch → `main` / `/docs`**.
+GitHub Actions (`.github/workflows/deploy.yml`) baut bei jedem Push auf `main` und veröffentlicht
+auf GitHub Pages. Einmalig einstellen: **Settings → Pages → Source: GitHub Actions**.
 
-Die fertige Seite liegt im Ordner `docs/`. Nach jeder Änderung (auch im CMS) neu bauen und pushen:
+Die Testumgebung ist für Google auf `noindex` gestellt. Für den Livegang auf zurichfood.ch
+im Workflow setzen:
 
-```bash
-git pull
-npm run build
-git add docs && git commit -m "Seite neu gebaut" && git push
 ```
-
-Die Testumgebung ist für Google auf `noindex` gestellt. Für den Livegang auf zurichfood.ch so bauen:
-
-```bash
-SITE_URL=https://zurichfood.ch BASE_PATH=/ PUBLIC_INDEXING=true npm run build
+SITE_URL: https://zurichfood.ch
+BASE_PATH: /
+PUBLIC_INDEXING: 'true'
 ```
 
 und in `public/admin/config.yml` `site_url` anpassen. Danach die Domain in der

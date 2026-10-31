@@ -1,0 +1,534 @@
+---
+/**
+ * Redaktion: einfache Seite zum Veröffentlichen neuer Beiträge.
+ * Nicht verlinkt, nicht in der Sitemap, noindex. Schreibrechte hat nur,
+ * wer einen GitHub-Token mit Zugriff auf das Repository besitzt.
+ */
+import '../styles/global.css';
+import { getCollection } from 'astro:content';
+import { CATEGORIES, CATEGORY_META } from '../i18n';
+import { postKey, postLang, postUrl, withBase } from '../lib/urls';
+
+const REPO = 'pabloesteves91/zurichfood';
+const BRANCH = 'main';
+
+const posts = (await getCollection('posts', (p) => postLang(p) === 'de'))
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .map((p) => ({ key: postKey(p), title: p.data.title, url: postUrl(p), draft: p.data.draft, date: p.data.date.toISOString().slice(0, 10) }));
+const today = new Date().toISOString().slice(0, 10);
+---
+
+<!doctype html>
+<html lang="de-CH">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Redaktion · Zürich Food</title>
+    <link rel="icon" type="image/png" href={withBase('/favicon-32.png')} />
+  </head>
+  <body>
+    <div class="app" data-repo={REPO} data-branch={BRANCH} data-base={import.meta.env.BASE_URL} data-site={Astro.site?.href}>
+      <header class="top">
+        <a class="brand" href={withBase('/')}>Zürich Food <span>Redaktion</span></a>
+        <button class="link" type="button" data-logout hidden>Abmelden</button>
+      </header>
+
+      <!-- Login -->
+      <section class="card" data-login>
+        <h1>Anmelden</h1>
+        <p class="muted">Gib deinen GitHub-Zugangsschlüssel (Token) ein. Er wird nur in diesem Browser gespeichert.</p>
+        <form data-login-form class="stack">
+          <div class="field">
+            <label for="token">Token</label>
+            <input class="input" id="token" type="password" autocomplete="off" placeholder="github_pat_…" required />
+          </div>
+          <button class="btn" type="submit">Anmelden</button>
+          <p class="error" data-login-error></p>
+        </form>
+        <details class="help">
+          <summary>Wie bekomme ich einen Token?</summary>
+          <ol>
+            <li>Auf github.com: <b>Settings → Developer settings → Personal access tokens → Fine-grained tokens → Generate new token</b></li>
+            <li>Repository access: <b>Only select repositories</b> → <code>{REPO}</code></li>
+            <li>Permissions → Repository → <b>Contents: Read and write</b></li>
+            <li>Token kopieren und hier einfügen.</li>
+          </ol>
+        </details>
+      </section>
+
+      <!-- Editor -->
+      <form class="editor" data-editor hidden novalidate>
+        <div class="editor__main">
+          <h1>Neuer Beitrag</h1>
+
+          <div class="field">
+            <label for="title">Titel *</label>
+            <input class="input input--title" id="title" name="title" required maxlength="120" placeholder="z.B. Die 5 besten Brunch-Spots in Zürich" />
+          </div>
+
+          <div class="field">
+            <label for="description">Kurzbeschreibung * <span class="count" data-count="description">0 / 160</span></label>
+            <textarea class="textarea textarea--short" id="description" name="description" required maxlength="200" placeholder="1–2 Sätze. Erscheint unter dem Titel und bei Google."></textarea>
+          </div>
+
+          <div class="field">
+            <label>Titelbild *</label>
+            <label class="drop" data-drop>
+              <input type="file" accept="image/*" data-cover hidden />
+              <img alt="" data-cover-preview hidden />
+              <span data-cover-hint>Bild auswählen oder hierher ziehen</span>
+            </label>
+          </div>
+          <div class="field">
+            <label for="imageAlt">Was ist auf dem Bild zu sehen? *</label>
+            <input class="input" id="imageAlt" name="imageAlt" required placeholder="z.B. Avocado-Toast und Cappuccino auf einem Holztisch" />
+          </div>
+
+          <div class="field">
+            <label for="body">Text *</label>
+            <div class="toolbar" role="toolbar" aria-label="Formatierung">
+              <button type="button" data-md="h2" title="Zwischentitel">Zwischentitel</button>
+              <button type="button" data-md="bold" title="Fett"><b>F</b></button>
+              <button type="button" data-md="italic" title="Kursiv"><i>K</i></button>
+              <button type="button" data-md="link" title="Link">Link</button>
+              <button type="button" data-md="list" title="Liste">• Liste</button>
+              <label class="toolbar__img">Bild einfügen<input type="file" accept="image/*" data-inline hidden /></label>
+              <button type="button" data-preview-toggle class="toolbar__right">Vorschau</button>
+            </div>
+            <textarea class="textarea textarea--body" id="body" name="body" required placeholder="Schreib hier deinen Beitrag. Ein leerer Absatz trennt Abschnitte."></textarea>
+            <div class="preview prose" data-preview hidden></div>
+          </div>
+
+          <details class="en" data-en>
+            <summary>Englische Version hinzufügen (optional)</summary>
+            <div class="stack">
+              <div class="field"><label for="title_en">Title</label><input class="input" id="title_en" name="title_en" /></div>
+              <div class="field"><label for="description_en">Short description</label><textarea class="textarea textarea--short" id="description_en" name="description_en" maxlength="200"></textarea></div>
+              <div class="field"><label for="imageAlt_en">Image description</label><input class="input" id="imageAlt_en" name="imageAlt_en" /></div>
+              <div class="field"><label for="body_en">Text</label><textarea class="textarea textarea--body" id="body_en" name="body_en"></textarea></div>
+            </div>
+          </details>
+        </div>
+
+        <aside class="editor__side">
+          <div class="card stack">
+            <div class="field">
+              <label for="category">Rubrik *</label>
+              <select class="select" id="category" name="category">
+                {CATEGORIES.map((c) => <option value={c}>{CATEGORY_META[c].name.de}</option>)}
+              </select>
+            </div>
+            <div class="field">
+              <label for="date">Datum</label>
+              <input class="input" id="date" name="date" type="date" value={today} />
+            </div>
+            <fieldset class="field">
+              <legend>Autorinnen</legend>
+              <label class="check"><input type="checkbox" name="authors" value="Laura Wick" checked /> Laura Wick</label>
+              <label class="check"><input type="checkbox" name="authors" value="Eva Wick" checked /> Eva Wick</label>
+            </fieldset>
+            <div class="field">
+              <label for="disclosure">Transparenz (optional)</label>
+              <input class="input" id="disclosure" name="disclosure" placeholder="z.B. Wir wurden eingeladen." />
+            </div>
+            <label class="check"><input type="checkbox" name="featured" /> Titelgeschichte auf der Startseite</label>
+            <label class="check"><input type="checkbox" name="draft" /> Nur als Entwurf speichern</label>
+            <div class="field">
+              <label for="slug">Adresse (URL)</label>
+              <div class="slug"><span>…/</span><input class="input" id="slug" name="slug" pattern="[a-z0-9-]+" /></div>
+            </div>
+            <button class="btn btn--wide" type="submit" data-submit>Veröffentlichen</button>
+            <p class="status" data-status role="status" aria-live="polite"></p>
+          </div>
+
+          <div class="card">
+            <h2>Bisherige Beiträge</h2>
+            <ul class="posts">
+              {posts.map((p) => (
+                <li><a href={p.url} target="_blank">{p.title}</a><span>{p.date}{p.draft ? ' · Entwurf' : ''}</span></li>
+              ))}
+            </ul>
+            <p class="muted small">Bestehende Beiträge bearbeiten: <a href={withBase('/admin/')}>Erweiterter Editor</a></p>
+          </div>
+        </aside>
+      </form>
+    </div>
+
+    <script type="application/json" id="existing" set:html={JSON.stringify(posts.map((p) => p.key))} />
+
+    <style>
+      :global([hidden]) { display: none !important; }
+      body { background: var(--paper); }
+      .app { max-width: 1180px; margin: 0 auto; padding: 1.25rem var(--gutter) 4rem; }
+      .top { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1.25rem; border-bottom: 1px solid var(--line); margin-bottom: 2rem; }
+      .brand { font-family: var(--serif); font-size: 1.6rem; text-decoration: none; }
+      .brand span { font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); margin-left: 0.5rem; }
+      .link { background: none; border: 0; font: inherit; font-size: 0.9rem; text-decoration: underline; cursor: pointer; color: var(--muted); }
+      .card { background: var(--surface); border: 1px solid var(--line); padding: clamp(1.25rem, 3vw, 2rem); }
+      [data-login] { max-width: 480px; margin: 4vh auto; }
+      h1 { font-size: var(--step-3); margin-bottom: 1rem; }
+      h2 { font-size: var(--step-1); margin-bottom: 1rem; }
+      .muted { color: var(--muted); }
+      .small { font-size: 0.85rem; margin-top: 1rem; }
+      .stack { display: grid; gap: 1.1rem; margin-top: 1.25rem; }
+      .field { display: grid; gap: 0.4rem; border: 0; padding: 0; margin: 0; }
+      .field > label, legend { font-size: 0.85rem; font-weight: 600; }
+      .count { float: right; font-weight: 400; color: var(--muted); }
+      .count.is-warn { color: #a0471f; }
+      .error { color: #a0471f; font-size: 0.9rem; }
+      .error:empty { display: none; }
+      .help { margin-top: 1.5rem; font-size: 0.9rem; }
+      .help summary { cursor: pointer; color: var(--accent-ink); }
+      .help ol { padding-left: 1.2rem; display: grid; gap: 0.4rem; margin-top: 0.75rem; }
+      code { background: var(--paper); padding: 0.1em 0.35em; font-size: 0.85em; }
+
+      .editor { display: grid; grid-template-columns: 1fr 340px; gap: 2rem; align-items: start; }
+      .editor__main { display: grid; gap: 1.4rem; background: var(--surface); border: 1px solid var(--line); padding: clamp(1.25rem, 3vw, 2.25rem); }
+      .editor__side { display: grid; gap: 1.25rem; position: sticky; top: 1rem; }
+      .input--title { font-family: var(--serif); font-size: 1.5rem; }
+      .textarea--short { min-height: 5rem; }
+      .textarea--body { min-height: 26rem; font-size: 1rem; line-height: 1.7; border-top-left-radius: 0; border-top-right-radius: 0; }
+      .drop { display: grid; place-items: center; min-height: 200px; border: 1px dashed var(--muted); background: var(--paper); cursor: pointer; text-align: center; padding: 1rem; color: var(--muted); font-size: 0.95rem; position: relative; overflow: hidden; }
+      .drop.is-over { border-color: var(--accent); background: var(--gold-soft); }
+      .drop img { max-height: 340px; width: auto; }
+      .toolbar { display: flex; flex-wrap: wrap; gap: 0.25rem; border: 1px solid var(--line); border-bottom: 0; padding: 0.4rem; background: var(--paper); }
+      .toolbar button, .toolbar__img { background: var(--surface); border: 1px solid var(--line); padding: 0.4rem 0.7rem; font: inherit; font-size: 0.85rem; cursor: pointer; min-height: 36px; display: inline-flex; align-items: center; }
+      .toolbar button:hover, .toolbar__img:hover { border-color: var(--text); }
+      .toolbar__right { margin-left: auto; }
+      .preview { border: 1px solid var(--line); padding: 1.25rem; min-height: 26rem; }
+      .preview img { max-width: 100%; }
+      .en summary { cursor: pointer; font-weight: 600; font-size: 0.95rem; }
+      .check { display: flex; gap: 0.6rem; align-items: center; font-size: 0.95rem; cursor: pointer; }
+      .check input { width: 18px; height: 18px; accent-color: var(--text); }
+      .slug { display: flex; align-items: center; gap: 0.3rem; color: var(--muted); }
+      .slug .input { min-height: 40px; font-size: 0.9rem; }
+      .btn--wide { width: 100%; }
+      .btn[disabled] { opacity: 0.6; cursor: wait; }
+      .status { font-size: 0.92rem; line-height: 1.5; }
+      .status:empty { display: none; }
+      .status.is-error { color: #a0471f; }
+      .status a { color: var(--accent-ink); font-weight: 600; }
+      .posts { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.6rem; font-size: 0.9rem; }
+      .posts li { display: grid; }
+      .posts a { text-decoration: none; }
+      .posts span { color: var(--muted); font-size: 0.78rem; }
+      @media (max-width: 900px) {
+        .editor { grid-template-columns: 1fr; }
+        .editor__side { position: static; }
+      }
+    </style>
+
+    <script>
+      type Pending = { path: string; data: Blob };
+
+      const app = document.querySelector<HTMLElement>('.app')!;
+      const REPO = app.dataset.repo!;
+      const BRANCH = app.dataset.branch!;
+      const SITE = new URL(app.dataset.base!, app.dataset.site).href;
+      const API = `https://api.github.com/repos/${REPO}`;
+      const existing: string[] = JSON.parse(document.getElementById('existing')!.textContent!);
+      const KEY = 'zf-redaktion-token';
+      const DRAFT = 'zf-redaktion-draft';
+
+      const $ = <T extends Element = HTMLElement>(s: string) => document.querySelector<T>(s)!;
+      const login = $('[data-login]');
+      const editor = $<HTMLFormElement>('[data-editor]');
+      const logout = $<HTMLButtonElement>('[data-logout]');
+      const statusEl = $('[data-status]');
+      const submitBtn = $<HTMLButtonElement>('[data-submit]');
+
+      const store = {
+        get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } },
+        set: (k: string, v: string) => { try { localStorage.setItem(k, v); } catch {} },
+        del: (k: string) => { try { localStorage.removeItem(k); } catch {} },
+      };
+      let token = store.get(KEY) ?? '';
+
+      async function gh(path: string, init: RequestInit = {}) {
+        const res = await fetch(path.startsWith('http') ? path : `${API}${path}`, {
+          ...init,
+          headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(init.body ? { 'Content-Type': 'application/json' } : {}) },
+        });
+        if (!res.ok && res.status !== 404) {
+          const msg = await res.json().catch(() => ({}));
+          throw new Error(`${res.status}: ${(msg as any).message ?? res.statusText}`);
+        }
+        return res;
+      }
+
+      function showEditor(on: boolean) {
+        login.hidden = on;
+        editor.hidden = !on;
+        logout.hidden = !on;
+      }
+
+      async function verify(t: string) {
+        token = t;
+        const res = await gh('');
+        if (res.status === 404) throw new Error('Repository nicht gefunden. Hat der Token Zugriff auf ' + REPO + '?');
+        const repo = await res.json();
+        if (!repo.permissions?.push) throw new Error('Der Token hat keine Schreibrechte (Contents: Read and write).');
+      }
+
+      $<HTMLFormElement>('[data-login-form]').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const err = $('[data-login-error]');
+        err.textContent = '';
+        const t = $<HTMLInputElement>('#token').value.trim();
+        try {
+          await verify(t);
+          store.set(KEY, t);
+          showEditor(true);
+        } catch (ex) {
+          err.textContent = ex instanceof Error && ex.message.startsWith('401') ? 'Token ungültig oder abgelaufen.' : String((ex as Error).message);
+        }
+      });
+      logout.addEventListener('click', () => { store.del(KEY); token = ''; showEditor(false); });
+      if (token) showEditor(true);
+
+      // ---------- Slug ----------
+      const slugify = (s: string) =>
+        s.toLowerCase()
+          .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+          .normalize('NFD').replace(/[̀-ͯ]/g, '')
+          .replace(/&/g, ' und ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70).replace(/-+$/, '');
+      const titleEl = $<HTMLInputElement>('#title');
+      const slugEl = $<HTMLInputElement>('#slug');
+      let slugTouched = false;
+      titleEl.addEventListener('input', () => { if (!slugTouched) slugEl.value = slugify(titleEl.value); });
+      slugEl.addEventListener('input', () => { slugTouched = true; slugEl.value = slugify(slugEl.value); });
+
+      // ---------- Zeichen zählen ----------
+      const desc = $<HTMLTextAreaElement>('#description');
+      const count = $('[data-count="description"]');
+      const updCount = () => { const n = desc.value.length; count.textContent = `${n} / 160`; count.classList.toggle('is-warn', n > 0 && (n < 50 || n > 170)); };
+      desc.addEventListener('input', updCount);
+
+      // ---------- Bilder ----------
+      const pending: Pending[] = [];
+      async function compress(file: File, max = 1800): Promise<Blob> {
+        const bmp = await createImageBitmap(file).catch(() => null);
+        if (!bmp) return file;
+        const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(bmp.width * scale);
+        canvas.height = Math.round(bmp.height * scale);
+        canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+        return new Promise((r) => canvas.toBlob((b) => r(b ?? file), 'image/jpeg', 0.86));
+      }
+
+      let cover: Blob | null = null;
+      const coverInput = $<HTMLInputElement>('[data-cover]');
+      const coverPreview = $<HTMLImageElement>('[data-cover-preview]');
+      const drop = $('[data-drop]');
+      async function setCover(file?: File) {
+        if (!file || !file.type.startsWith('image/')) return;
+        cover = await compress(file);
+        coverPreview.src = URL.createObjectURL(cover);
+        coverPreview.hidden = false;
+        $('[data-cover-hint]').hidden = true;
+      }
+      coverInput.addEventListener('change', () => setCover(coverInput.files?.[0]));
+      drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('is-over'); });
+      drop.addEventListener('dragleave', () => drop.classList.remove('is-over'));
+      drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('is-over'); setCover((e as DragEvent).dataTransfer?.files?.[0]); });
+
+      // ---------- Toolbar ----------
+      const body = $<HTMLTextAreaElement>('#body');
+      const previews = new Map<string, string>();
+      function insert(before: string, after = '', placeholder = '') {
+        const { selectionStart: s, selectionEnd: e, value } = body;
+        const sel = value.slice(s, e) || placeholder;
+        body.setRangeText(before + sel + after, s, e, 'end');
+        body.focus();
+        body.dispatchEvent(new Event('input'));
+      }
+      document.querySelectorAll<HTMLButtonElement>('[data-md]').forEach((b) =>
+        b.addEventListener('click', () => {
+          const t = b.dataset.md;
+          if (t === 'h2') insert('\n\n## ', '\n\n', 'Zwischentitel');
+          if (t === 'bold') insert('**', '**', 'fetter Text');
+          if (t === 'italic') insert('*', '*', 'kursiver Text');
+          if (t === 'list') insert('\n- ', '', 'Punkt');
+          if (t === 'link') {
+            const url = prompt('Link-Adresse (https://…)');
+            if (url) insert('[', `](${url})`, 'Linktext');
+          }
+        }),
+      );
+      const inlineInput = $<HTMLInputElement>('[data-inline]');
+      inlineInput.addEventListener('change', async () => {
+        const file = inlineInput.files?.[0];
+        if (!file) return;
+        const alt = prompt('Was ist auf dem Bild zu sehen?') ?? '';
+        const blob = await compress(file);
+        const name = `${slugEl.value || 'bild'}-${Date.now().toString(36)}.jpg`;
+        const path = `src/content/posts/images/${name}`;
+        pending.push({ path, data: blob });
+        previews.set(`../images/${name}`, URL.createObjectURL(blob));
+        insert(`\n\n![${alt.replace(/[\[\]]/g, '')}](../images/${name})\n\n`);
+        inlineInput.value = '';
+      });
+
+      // ---------- Vorschau (einfaches Markdown) ----------
+      const preview = $('[data-preview]');
+      const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+      function md(src: string) {
+        const inline = (s: string) => esc(s)
+          .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, a, u) => `<img alt="${a}" src="${previews.get(u) ?? u}">`)
+          .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+          .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        return src.trim().split(/\n{2,}/).map((block) => {
+          if (block.startsWith('## ')) return `<h2>${inline(block.slice(3))}</h2>`;
+          if (block.startsWith('### ')) return `<h3>${inline(block.slice(4))}</h3>`;
+          if (/^- /m.test(block) && block.split('\n').every((l) => l.startsWith('- '))) return `<ul>${block.split('\n').map((l) => `<li>${inline(l.slice(2))}</li>`).join('')}</ul>`;
+          if (/^!\[[^\]]*\]\([^)]+\)$/.test(block.trim())) return inline(block.trim());
+          return `<p>${inline(block).replace(/\n/g, '<br>')}</p>`;
+        }).join('');
+      }
+      const previewBtn = $<HTMLButtonElement>('[data-preview-toggle]');
+      previewBtn.addEventListener('click', () => {
+        const on = preview.hidden;
+        if (on) preview.innerHTML = md(body.value);
+        preview.hidden = !on;
+        body.hidden = on;
+        previewBtn.textContent = on ? 'Bearbeiten' : 'Vorschau';
+      });
+
+      // ---------- Entwurf lokal sichern ----------
+      const fields = ['title', 'description', 'imageAlt', 'body', 'title_en', 'description_en', 'imageAlt_en', 'body_en', 'category', 'disclosure'];
+      const saved = JSON.parse(store.get(DRAFT) ?? '{}');
+      fields.forEach((f) => { const el = editor.elements.namedItem(f) as HTMLInputElement | null; if (el && saved[f]) el.value = saved[f]; });
+      if (saved.title && !slugEl.value) slugEl.value = slugify(saved.title);
+      updCount();
+      editor.addEventListener('input', () => {
+        const d: Record<string, string> = {};
+        fields.forEach((f) => { d[f] = (editor.elements.namedItem(f) as HTMLInputElement).value; });
+        store.set(DRAFT, JSON.stringify(d));
+      });
+
+      // ---------- Veröffentlichen ----------
+      const yaml = (v: string) => JSON.stringify(v);
+      function frontmatter(o: { title: string; description: string; category: string; date: string; authors: string[]; image: string; imageAlt: string; featured: boolean; draft: boolean; disclosure: string; urlSlug?: string }) {
+        const lines = [
+          '---',
+          `title: ${yaml(o.title)}`,
+          `description: ${yaml(o.description)}`,
+          ...(o.urlSlug ? [`urlSlug: ${yaml(o.urlSlug)}`] : []),
+          `category: ${o.category}`,
+          `date: ${o.date}`,
+          `authors: [${o.authors.map(yaml).join(', ')}]`,
+          `image: ${o.image}`,
+          `imageAlt: ${yaml(o.imageAlt)}`,
+          ...(o.featured ? ['featured: true'] : []),
+          ...(o.draft ? ['draft: true'] : []),
+          ...(o.disclosure ? [`disclosure: ${yaml(o.disclosure)}`] : []),
+          '---',
+          '',
+        ];
+        return lines.join('\n');
+      }
+
+      async function toBase64(data: Blob | string) {
+        const blob = typeof data === 'string' ? new Blob([data], { type: 'text/plain;charset=utf-8' }) : data;
+        const url: string = await new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result as string); fr.readAsDataURL(blob); });
+        return url.slice(url.indexOf(',') + 1);
+      }
+
+      function resetForm() {
+        editor.reset();
+        $<HTMLInputElement>('#date').value = new Date().toISOString().slice(0, 10);
+        cover = null;
+        coverPreview.hidden = true;
+        $('[data-cover-hint]').hidden = false;
+        pending.length = 0;
+        slugTouched = false;
+        if (!preview.hidden) previewBtn.click();
+        updCount();
+      }
+
+      function setStatus(html: string, error = false) {
+        statusEl.innerHTML = html;
+        statusEl.classList.toggle('is-error', error);
+      }
+
+      editor.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const v = (n: string) => ((editor.elements.namedItem(n) as HTMLInputElement).value ?? '').trim();
+        const checked = (n: string) => (editor.elements.namedItem(n) as HTMLInputElement).checked;
+        const slug = slugify(slugEl.value || v('title'));
+        const authors = [...editor.querySelectorAll<HTMLInputElement>('input[name="authors"]:checked')].map((i) => i.value);
+
+        const problems: string[] = [];
+        if (!v('title')) problems.push('Titel fehlt.');
+        if (v('description').length < 50) problems.push('Kurzbeschreibung: mindestens 50 Zeichen.');
+        if (!cover) problems.push('Titelbild fehlt.');
+        if (!v('imageAlt')) problems.push('Bildbeschreibung fehlt.');
+        if (v('body').length < 30) problems.push('Text ist zu kurz.');
+        if (!authors.length) problems.push('Mindestens eine Autorin wählen.');
+        if (!slug) problems.push('Adresse (URL) fehlt.');
+        if (existing.includes(slug)) problems.push('Diese Adresse gibt es schon. Bitte Titel oder URL ändern.');
+        const hasEn = Boolean(v('title_en') || v('body_en'));
+        if (hasEn && (!v('title_en') || v('description_en').length < 50 || v('body_en').length < 30)) problems.push('Englische Version: Titel, Beschreibung (min. 50 Zeichen) und Text ausfüllen oder alles leer lassen.');
+        if (problems.length) { setStatus(problems.join('<br>'), true); return; }
+
+        submitBtn.disabled = true;
+        setStatus('Wird hochgeladen …');
+        try {
+          const check = await gh(`/contents/src/content/posts/de/${slug}.md?ref=${BRANCH}`);
+          if (check.status !== 404) throw new Error('Diese Adresse gibt es schon. Bitte Titel oder URL ändern.');
+
+          const coverPath = `src/content/posts/images/${slug}.jpg`;
+          const common = { category: v('category'), date: v('date') || new Date().toISOString().slice(0, 10), authors, image: `../images/${slug}.jpg`, featured: checked('featured'), draft: checked('draft') };
+          const files: { path: string; data: Blob | string }[] = [
+            { path: coverPath, data: cover! },
+            ...pending.filter((p) => v('body').includes(p.path.split('/').pop()!) || v('body_en').includes(p.path.split('/').pop()!)),
+            { path: `src/content/posts/de/${slug}.md`, data: frontmatter({ ...common, title: v('title'), description: v('description'), imageAlt: v('imageAlt'), disclosure: v('disclosure') }) + v('body') + '\n' },
+          ];
+          if (hasEn) {
+            const enSlug = slugify(v('title_en'));
+            files.push({ path: `src/content/posts/en/${slug}.md`, data: frontmatter({ ...common, title: v('title_en'), description: v('description_en'), imageAlt: v('imageAlt_en') || v('imageAlt'), disclosure: '', urlSlug: enSlug !== slug ? enSlug : undefined }) + v('body_en') + '\n' });
+          }
+
+          const ref = await (await gh(`/git/ref/heads/${BRANCH}`)).json();
+          const head = ref.object.sha;
+          const baseTree = (await (await gh(`/git/commits/${head}`)).json()).tree.sha;
+          const tree = [];
+          for (const f of files) {
+            setStatus(`Lade hoch: ${f.path.split('/').pop()} …`);
+            const blob = await (await gh('/git/blobs', { method: 'POST', body: JSON.stringify({ content: await toBase64(f.data), encoding: 'base64' }) })).json();
+            tree.push({ path: f.path, mode: '100644', type: 'blob', sha: blob.sha });
+          }
+          const newTree = await (await gh('/git/trees', { method: 'POST', body: JSON.stringify({ base_tree: baseTree, tree }) })).json();
+          const commit = await (await gh('/git/commits', { method: 'POST', body: JSON.stringify({ message: `Neuer Beitrag: ${v('title')}`, tree: newTree.sha, parents: [head] }) })).json();
+          await gh(`/git/refs/heads/${BRANCH}`, { method: 'PATCH', body: JSON.stringify({ sha: commit.sha }) });
+
+          existing.push(slug);
+          store.del(DRAFT);
+          const url = new URL(`${v('category')}/${slug}/`, SITE).href;
+          resetForm();
+          if (common.draft) {
+            setStatus('Als Entwurf gespeichert. Er ist auf der Seite nicht sichtbar.');
+            return;
+          }
+          setStatus(`Gespeichert! Die Seite wird jetzt neu gebaut (ca. 1–2 Minuten).<br><span data-live>Warte auf Veröffentlichung …</span>`);
+          for (let i = 0; i < 40; i++) {
+            await new Promise((r) => setTimeout(r, 10000));
+            const res = await fetch(url, { method: 'HEAD', cache: 'no-store' }).catch(() => null);
+            if (res?.ok) {
+              setStatus(`Veröffentlicht! <a href="${url}" target="_blank">Beitrag ansehen →</a>`);
+              return;
+            }
+          }
+          setStatus(`Gespeichert. Der Beitrag erscheint in Kürze unter <a href="${url}" target="_blank">${url}</a>.`);
+        } catch (ex) {
+          setStatus(`Fehler: ${esc((ex as Error).message)}`, true);
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

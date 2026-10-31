@@ -9,14 +9,12 @@ const base = process.env.BASE_PATH ?? '/zurichfood';
 
 export default defineConfig({
   site,
-  // GitHub Pages: "Deploy from a branch" → main → /docs
-  outDir: './docs',
   base,
   trailingSlash: 'always',
   build: { format: 'directory' },
   integrations: [
     sitemap({
-      filter: (page) => !page.includes('/admin/') && !page.includes('/404'),
+      filter: (page) => !/\/(admin|redaktion|404)\//.test(page),
     }),
   ],
   image: { responsiveStyles: true },
