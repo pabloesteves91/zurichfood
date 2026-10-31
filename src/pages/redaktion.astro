@@ -409,20 +409,43 @@ const PLACE_TYPES = [
         e.preventDefault();
         const err = $('[data-login-error]');
         err.textContent = '';
-        token = $<HTMLInputElement>('#token').value.trim();
+        token = $<HTMLInputElement>('#token').value.replace(/\s|["']/g, '');
         try {
-          const res = await gh('');
-          if (res.status === 404) throw new Error(`Repository nicht gefunden. Hat der Token Zugriff auf ${REPO}?`);
-          const repo = await res.json();
-          if (!repo.permissions?.push) throw new Error('Der Token hat keine Schreibrechte (Contents: Read and write).');
+          await checkToken();
           store.set(KEY, token);
+          $<HTMLInputElement>('#token').value = '';
           showEditor(true);
+          if (retryAfterLogin) {
+            retryAfterLogin = false;
+            setStatus('Angemeldet. Dein Beitrag ist noch da, tippe nochmals auf «Veröffentlichen».');
+          }
         } catch (ex) {
-          const m = (ex as Error).message;
-          err.textContent = m.startsWith('401') ? 'Token ungültig oder abgelaufen.' : m;
+          err.textContent = tokenMessage((ex as Error).message);
         }
       });
       logout.addEventListener('click', () => { store.del(KEY); token = ''; showEditor(false); });
+
+      async function checkToken() {
+        const res = await gh('');
+        if (res.status === 404) throw new Error(`Repository nicht gefunden. Hat der Token Zugriff auf ${REPO}?`);
+        const repo = await res.json();
+        if (!repo.permissions?.push) throw new Error('Der Token darf nichts speichern. Beim Token unter «Permissions» → «Contents» → «Read and write» wählen.');
+      }
+      const isAuthError = (m: string) => /^(401|403)/.test(m);
+      function tokenMessage(m: string) {
+        if (m.startsWith('401')) return 'Dieser Token ist ungültig oder abgelaufen. Bitte auf GitHub einen neuen erstellen und hier einfügen.';
+        if (m.startsWith('403')) return 'Der Token hat keine Berechtigung für dieses Repository. Beim Token «Contents: Read and write» und das Repository zurichfood auswählen.';
+        return m;
+      }
+      let retryAfterLogin = false;
+      /** Token ungültig: Anmeldung zeigen, Beitrag bleibt im Editor erhalten. */
+      function requireLogin(message: string) {
+        store.del(KEY);
+        token = '';
+        showEditor(false);
+        $('[data-login-error]').textContent = message;
+        $<HTMLInputElement>('#token').focus();
+      }
 
       // ---------- Kopf ----------
       function autosize(t: HTMLTextAreaElement) { t.style.height = 'auto'; t.style.height = `${t.scrollHeight}px`; }
@@ -907,14 +930,25 @@ const PLACE_TYPES = [
           }
           setStatus(`Gespeichert. Der Beitrag erscheint in Kürze unter <a href="${url}" target="_blank">${url}</a>.`);
         } catch (ex) {
-          setStatus(`Fehler: ${esc((ex as Error).message)}`, true);
+          const m = (ex as Error).message;
+          if (isAuthError(m)) {
+            setStatus('');
+            retryAfterLogin = true;
+            requireLogin(tokenMessage(m));
+          } else setStatus(`Fehler: ${esc(m)}`, true);
         } finally {
           submitBtns.forEach((b) => (b.disabled = false));
         }
       });
 
       loadDraft();
-      if (token) showEditor(true);
+      if (token) {
+        showEditor(true);
+        checkToken().catch((ex) => {
+          const m = (ex as Error).message;
+          if (isAuthError(m) || m.startsWith('Repository') || m.startsWith('Der Token')) requireLogin(`Dein gespeicherter Token funktioniert nicht mehr. ${tokenMessage(m)}`);
+        });
+      }
     </script>
   </body>
 </html>
