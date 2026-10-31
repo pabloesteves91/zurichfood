@@ -1,6 +1,6 @@
 ---
 /**
- * Redaktion: einfache Seite zum Veröffentlichen neuer Beiträge.
+ * Redaktion: Beiträge im Layout der Beitragsseite schreiben und veröffentlichen.
  * Nicht verlinkt, nicht in der Sitemap, noindex. Schreibrechte hat nur,
  * wer einen GitHub-Token mit Zugriff auf das Repository besitzt.
  */
@@ -15,7 +15,14 @@ const BRANCH = 'main';
 const posts = (await getCollection('posts', (p) => postLang(p) === 'de'))
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
   .map((p) => ({ key: postKey(p), title: p.data.title, url: postUrl(p), draft: p.data.draft, date: p.data.date.toISOString().slice(0, 10) }));
+const places = (await getCollection('places'))
+  .map((p) => ({ id: p.id, name: p.data.name, city: p.data.city }))
+  .sort((a, b) => a.name.localeCompare(b.name));
 const today = new Date().toISOString().slice(0, 10);
+const PLACE_TYPES = [
+  ['Restaurant', 'Restaurant'], ['CafeOrCoffeeShop', 'Café'], ['BarOrPub', 'Bar'], ['Bakery', 'Bäckerei'],
+  ['Hotel', 'Hotel'], ['Store', 'Laden / Store'], ['Event', 'Event / Markt'], ['LocalBusiness', 'Sonstiges'],
+];
 ---
 
 <!doctype html>
@@ -35,7 +42,7 @@ const today = new Date().toISOString().slice(0, 10);
       </header>
 
       <!-- Login -->
-      <section class="card" data-login>
+      <section class="card login" data-login>
         <h1>Anmelden</h1>
         <p class="muted">Gib deinen GitHub-Zugangsschlüssel (Token) ein. Er wird nur in diesem Browser gespeichert.</p>
         <form data-login-form class="stack">
@@ -59,66 +66,76 @@ const today = new Date().toISOString().slice(0, 10);
 
       <!-- Editor -->
       <form class="editor" data-editor hidden novalidate>
-        <div class="editor__main">
-          <h1>Neuer Beitrag</h1>
+        <article class="sheet">
+          <header class="post-head">
+            <select class="kicker-select" name="category" aria-label="Rubrik">
+              {CATEGORIES.map((c) => <option value={c}>{CATEGORY_META[c].name.de}</option>)}
+            </select>
+            <textarea class="h1-input" name="title" rows="1" placeholder="Titel des Beitrags" aria-label="Titel" maxlength="120" data-autosize></textarea>
+            <textarea class="lead-input" name="description" rows="2" placeholder="Kurzbeschreibung: 1–2 Sätze, erscheint unter dem Titel und bei Google." aria-label="Kurzbeschreibung" maxlength="200" data-autosize></textarea>
+            <p class="count" data-count>0 / 160 Zeichen</p>
+            <p class="meta" data-meta></p>
+          </header>
 
-          <div class="field">
-            <label for="title">Titel *</label>
-            <input class="input input--title" id="title" name="title" required maxlength="120" placeholder="z.B. Die 5 besten Brunch-Spots in Zürich" />
-          </div>
+          <label class="hero" data-drop>
+            <input type="file" accept="image/*" data-cover hidden />
+            <img alt="" data-cover-preview hidden />
+            <span class="hero__hint" data-cover-hint><b>Titelbild</b> auswählen oder hierher ziehen</span>
+          </label>
+          <input class="alt-input" name="imageAlt" placeholder="Was ist auf dem Titelbild zu sehen? (wichtig für Google)" aria-label="Bildbeschreibung" />
 
-          <div class="field">
-            <label for="description">Kurzbeschreibung * <span class="count" data-count="description">0 / 160</span></label>
-            <textarea class="textarea textarea--short" id="description" name="description" required maxlength="200" placeholder="1–2 Sätze. Erscheint unter dem Titel und bei Google."></textarea>
-          </div>
+          <div class="read">
+            <div class="disclosure">
+              <strong>Transparenz:</strong>
+              <input name="disclosure" placeholder="optional, z.B. «Wir wurden eingeladen. Die Meinung ist unsere eigene.»" aria-label="Transparenz-Hinweis" />
+            </div>
 
-          <div class="field">
-            <label>Titelbild *</label>
-            <label class="drop" data-drop>
-              <input type="file" accept="image/*" data-cover hidden />
-              <img alt="" data-cover-preview hidden />
-              <span data-cover-hint>Bild auswählen oder hierher ziehen</span>
-            </label>
-          </div>
-          <div class="field">
-            <label for="imageAlt">Was ist auf dem Bild zu sehen? *</label>
-            <input class="input" id="imageAlt" name="imageAlt" required placeholder="z.B. Avocado-Toast und Cappuccino auf einem Holztisch" />
-          </div>
-
-          <div class="field">
-            <label for="body">Text *</label>
+            <div class="writer">
             <div class="toolbar" role="toolbar" aria-label="Formatierung">
-              <button type="button" data-md="h2" title="Zwischentitel">Zwischentitel</button>
-              <button type="button" data-md="bold" title="Fett"><b>F</b></button>
-              <button type="button" data-md="italic" title="Kursiv"><i>K</i></button>
-              <button type="button" data-md="link" title="Link">Link</button>
-              <button type="button" data-md="list" title="Liste">• Liste</button>
-              <label class="toolbar__img">Bild einfügen<input type="file" accept="image/*" data-inline hidden /></label>
-              <button type="button" data-preview-toggle class="toolbar__right">Vorschau</button>
+              <button type="button" data-cmd="p" title="Normaler Text">Text</button>
+              <button type="button" data-cmd="h2" title="Zwischentitel">Zwischentitel</button>
+              <button type="button" data-cmd="bold" title="Fett"><b>F</b></button>
+              <button type="button" data-cmd="italic" title="Kursiv"><i>K</i></button>
+              <button type="button" data-cmd="link" title="Link">Link</button>
+              <button type="button" data-cmd="list" title="Aufzählung">• Liste</button>
+              <label class="tool-img" title="Bild in den Text einfügen">+ Bild<input type="file" accept="image/*" data-inline hidden /></label>
             </div>
-            <textarea class="textarea textarea--body" id="body" name="body" required placeholder="Schreib hier deinen Beitrag. Ein leerer Absatz trennt Abschnitte."></textarea>
-            <div class="preview prose" data-preview hidden></div>
+            <div class="prose body" contenteditable="true" data-body data-placeholder="Hier schreibst du den Beitrag. Mit «Zwischentitel» gliederst du ihn, z.B. «1. Gasthaus zum Gupf, Rehetobel»."></div>
+            </div>
+
+            <section class="places" aria-labelledby="places-title">
+              <h2 id="places-title">Adressen in diesem Beitrag</h2>
+              <p class="hint">Jede Adresse erscheint unter dem Beitrag, auf der Karte und bei Google. Die Position wird automatisch anhand der Adresse gesucht.</p>
+              <ul data-places></ul>
+              <div class="add-row">
+                <button type="button" class="btn btn--ghost" data-add-place>+ Neue Adresse</button>
+                <select class="select" data-existing aria-label="Bestehende Adresse hinzufügen">
+                  <option value="">Bestehende Adresse wählen …</option>
+                  {places.map((p) => <option value={p.id}>{p.name} ({p.city})</option>)}
+                </select>
+              </div>
+            </section>
+
+            <section class="faq" aria-labelledby="faq-title">
+              <h2 id="faq-title">Häufige Fragen</h2>
+              <p class="hint">Optional. Hilft, bei Google mit Antworten aufzutauchen.</p>
+              <div data-faqs></div>
+              <button type="button" class="btn btn--ghost" data-add-faq>+ Frage hinzufügen</button>
+            </section>
+
+            <details class="en">
+              <summary>Englische Version hinzufügen (optional)</summary>
+              <div class="stack">
+                <div class="field"><label for="title_en">Title</label><input class="input" id="title_en" name="title_en" /></div>
+                <div class="field"><label for="description_en">Short description</label><textarea class="textarea short" id="description_en" name="description_en" maxlength="200"></textarea></div>
+                <div class="field"><label for="body_en">Text</label><textarea class="textarea" id="body_en" name="body_en" placeholder="Absätze mit Leerzeile trennen. ## für Zwischentitel."></textarea></div>
+              </div>
+            </details>
           </div>
+        </article>
 
-          <details class="en" data-en>
-            <summary>Englische Version hinzufügen (optional)</summary>
-            <div class="stack">
-              <div class="field"><label for="title_en">Title</label><input class="input" id="title_en" name="title_en" /></div>
-              <div class="field"><label for="description_en">Short description</label><textarea class="textarea textarea--short" id="description_en" name="description_en" maxlength="200"></textarea></div>
-              <div class="field"><label for="imageAlt_en">Image description</label><input class="input" id="imageAlt_en" name="imageAlt_en" /></div>
-              <div class="field"><label for="body_en">Text</label><textarea class="textarea textarea--body" id="body_en" name="body_en"></textarea></div>
-            </div>
-          </details>
-        </div>
-
-        <aside class="editor__side">
+        <aside class="side">
           <div class="card stack">
-            <div class="field">
-              <label for="category">Rubrik *</label>
-              <select class="select" id="category" name="category">
-                {CATEGORIES.map((c) => <option value={c}>{CATEGORY_META[c].name.de}</option>)}
-              </select>
-            </div>
             <div class="field">
               <label for="date">Datum</label>
               <input class="input" id="date" name="date" type="date" value={today} />
@@ -128,18 +145,15 @@ const today = new Date().toISOString().slice(0, 10);
               <label class="check"><input type="checkbox" name="authors" value="Laura Wick" checked /> Laura Wick</label>
               <label class="check"><input type="checkbox" name="authors" value="Eva Wick" checked /> Eva Wick</label>
             </fieldset>
-            <div class="field">
-              <label for="disclosure">Transparenz (optional)</label>
-              <input class="input" id="disclosure" name="disclosure" placeholder="z.B. Wir wurden eingeladen." />
-            </div>
             <label class="check"><input type="checkbox" name="featured" /> Titelgeschichte auf der Startseite</label>
             <label class="check"><input type="checkbox" name="draft" /> Nur als Entwurf speichern</label>
             <div class="field">
               <label for="slug">Adresse (URL)</label>
-              <div class="slug"><span>…/</span><input class="input" id="slug" name="slug" pattern="[a-z0-9-]+" /></div>
+              <div class="slug"><span data-slug-prefix>…/food/</span><input class="input" id="slug" name="slug" /></div>
             </div>
             <button class="btn btn--wide" type="submit" data-submit>Veröffentlichen</button>
             <p class="status" data-status role="status" aria-live="polite"></p>
+            <button class="link small" type="button" data-clear>Alles leeren und neu beginnen</button>
           </div>
 
           <div class="card">
@@ -152,30 +166,78 @@ const today = new Date().toISOString().slice(0, 10);
             <p class="muted small">Bestehende Beiträge bearbeiten: <a href={withBase('/admin/')}>Erweiterter Editor</a></p>
           </div>
         </aside>
+
+        <div class="mobile-bar"><button class="btn btn--wide" type="submit">Veröffentlichen</button></div>
       </form>
     </div>
 
-    <script type="application/json" id="existing" set:html={JSON.stringify(posts.map((p) => p.key))} />
+    <template id="place-tpl">
+      <li class="place">
+        <div class="place__head">
+          <input class="place__name" data-f="name" placeholder="Name, z.B. Restaurant Anna" aria-label="Name" />
+          <div class="price" role="group" aria-label="Preisniveau">
+            <button type="button" data-price="1" title="Günstig">$</button>
+            <button type="button" data-price="2" title="Mittel">$$</button>
+            <button type="button" data-price="3" title="Gehoben">$$$</button>
+            <button type="button" data-price="4" title="Fine Dining">$$$$</button>
+          </div>
+        </div>
+        <input class="place__summary" data-f="summary" placeholder="Ein Satz dazu, z.B. Locker, kreativ, mediterran-italienisch." aria-label="Kurzbeschreibung" />
+        <dl>
+          <div><dt>Strasse &amp; Nr.</dt><dd><input data-f="street" placeholder="Anna-Heer-Strasse 2" /></dd></div>
+          <div><dt>PLZ / Ort</dt><dd class="two"><input data-f="postalCode" placeholder="8057" inputmode="numeric" /><input data-f="city" placeholder="Zürich" value="Zürich" /></dd></div>
+          <div><dt>Telefon</dt><dd><input data-f="phone" placeholder="044 552 87 44" inputmode="tel" /></dd></div>
+          <div><dt>Webseite</dt><dd><input data-f="website" placeholder="restaurant-anna.ch" inputmode="url" /></dd></div>
+          <div><dt>Auszeichnung</dt><dd><input data-f="award" placeholder="z.B. 1 Michelin-Stern" /></dd></div>
+          <div><dt>Küche</dt><dd><input data-f="cuisine" placeholder="z.B. Italienisch" /></dd></div>
+          <div><dt>Typ</dt><dd><select data-f="type">{PLACE_TYPES.map(([v, l]) => <option value={v}>{l}</option>)}</select></dd></div>
+          <div><dt>Kreis / Region</dt><dd><input data-f="area" placeholder="wird automatisch ergänzt" /></dd></div>
+        </dl>
+        <div class="place__foot">
+          <span class="geo" data-geo>Position: noch nicht gesucht</span>
+          <label class="link small">Eigenes Bild (optional)<input type="file" accept="image/*" data-place-img hidden /></label>
+          <img class="place__img" data-place-preview alt="" hidden />
+          <button type="button" class="link small danger" data-remove>Entfernen</button>
+        </div>
+      </li>
+    </template>
+
+    <template id="existing-tpl">
+      <li class="place place--existing">
+        <div class="place__head"><h3 data-name></h3><span class="muted small">bestehende Adresse</span></div>
+        <div class="place__foot"><button type="button" class="link small danger" data-remove>Entfernen</button></div>
+      </li>
+    </template>
+
+    <template id="faq-tpl">
+      <div class="faq-item">
+        <input data-q placeholder="Frage, z.B. Muss man reservieren?" aria-label="Frage" />
+        <textarea data-a rows="2" placeholder="Antwort" aria-label="Antwort"></textarea>
+        <button type="button" class="link small danger" data-remove>Entfernen</button>
+      </div>
+    </template>
+
+    <script type="application/json" id="data" set:html={JSON.stringify({ posts: posts.map((p) => p.key), places: places.map((p) => p.id) })} />
 
     <style>
       :global([hidden]) { display: none !important; }
       body { background: var(--paper); }
-      .app { max-width: 1180px; margin: 0 auto; padding: 1.25rem var(--gutter) 4rem; }
-      .top { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1.25rem; border-bottom: 1px solid var(--line); margin-bottom: 2rem; }
+      .app { max-width: 1320px; margin: 0 auto; padding: 1.25rem var(--gutter) 5rem; }
+      .top { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1.25rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--line); }
       .brand { font-family: var(--serif); font-size: 1.6rem; text-decoration: none; }
       .brand span { font-family: var(--sans); font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); margin-left: 0.5rem; }
-      .link { background: none; border: 0; font: inherit; font-size: 0.9rem; text-decoration: underline; cursor: pointer; color: var(--muted); }
-      .card { background: var(--surface); border: 1px solid var(--line); padding: clamp(1.25rem, 3vw, 2rem); }
-      [data-login] { max-width: 480px; margin: 4vh auto; }
-      h1 { font-size: var(--step-3); margin-bottom: 1rem; }
-      h2 { font-size: var(--step-1); margin-bottom: 1rem; }
+      .link { background: none; border: 0; padding: 0; font: inherit; font-size: 0.9rem; text-decoration: underline; text-underline-offset: 0.2em; cursor: pointer; color: var(--muted); }
+      .small { font-size: 0.82rem; }
+      .danger { color: #a0471f; }
       .muted { color: var(--muted); }
-      .small { font-size: 0.85rem; margin-top: 1rem; }
-      .stack { display: grid; gap: 1.1rem; margin-top: 1.25rem; }
+      .card { background: var(--surface); border: 1px solid var(--line); padding: 1.5rem; }
+      .card h2 { font-size: var(--step-1); margin-bottom: 1rem; }
+      .login { max-width: 480px; margin: 4vh auto; }
+      .login h1 { font-size: var(--step-3); margin-bottom: 1rem; }
+      .stack { display: grid; gap: 1rem; }
+      .login .stack { margin-top: 1.25rem; }
       .field { display: grid; gap: 0.4rem; border: 0; padding: 0; margin: 0; }
       .field > label, legend { font-size: 0.85rem; font-weight: 600; }
-      .count { float: right; font-weight: 400; color: var(--muted); }
-      .count.is-warn { color: #a0471f; }
       .error { color: #a0471f; font-size: 0.9rem; }
       .error:empty { display: none; }
       .help { margin-top: 1.5rem; font-size: 0.9rem; }
@@ -183,76 +245,156 @@ const today = new Date().toISOString().slice(0, 10);
       .help ol { padding-left: 1.2rem; display: grid; gap: 0.4rem; margin-top: 0.75rem; }
       code { background: var(--paper); padding: 0.1em 0.35em; font-size: 0.85em; }
 
-      .editor { display: grid; grid-template-columns: 1fr 340px; gap: 2rem; align-items: start; }
-      .editor__main { display: grid; gap: 1.4rem; background: var(--surface); border: 1px solid var(--line); padding: clamp(1.25rem, 3vw, 2.25rem); }
-      .editor__side { display: grid; gap: 1.25rem; position: sticky; top: 1rem; }
-      .input--title { font-family: var(--serif); font-size: 1.5rem; }
-      .textarea--short { min-height: 5rem; }
-      .textarea--body { min-height: 26rem; font-size: 1rem; line-height: 1.7; border-top-left-radius: 0; border-top-right-radius: 0; }
-      .drop { display: grid; place-items: center; min-height: 200px; border: 1px dashed var(--muted); background: var(--paper); cursor: pointer; text-align: center; padding: 1rem; color: var(--muted); font-size: 0.95rem; position: relative; overflow: hidden; }
-      .drop.is-over { border-color: var(--accent); background: var(--gold-soft); }
-      .drop img { max-height: 340px; width: auto; }
-      .toolbar { display: flex; flex-wrap: wrap; gap: 0.25rem; border: 1px solid var(--line); border-bottom: 0; padding: 0.4rem; background: var(--paper); }
-      .toolbar button, .toolbar__img { background: var(--surface); border: 1px solid var(--line); padding: 0.4rem 0.7rem; font: inherit; font-size: 0.85rem; cursor: pointer; min-height: 36px; display: inline-flex; align-items: center; }
-      .toolbar button:hover, .toolbar__img:hover { border-color: var(--text); }
-      .toolbar__right { margin-left: auto; }
-      .preview { border: 1px solid var(--line); padding: 1.25rem; min-height: 26rem; }
-      .preview img { max-width: 100%; }
-      .en summary { cursor: pointer; font-weight: 600; font-size: 0.95rem; }
+      .editor { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 2rem; align-items: start; }
+      .side { display: grid; gap: 1.25rem; position: sticky; top: 1rem; }
+      .sheet { background: var(--bg); border: 1px solid var(--line); padding-bottom: 4rem; min-width: 0; }
+
+      /* Kopf wie auf der Beitragsseite */
+      .post-head { max-width: 860px; margin: 0 auto; padding: clamp(2rem, 5vw, 4rem) var(--gutter) 1.5rem; text-align: center; display: grid; gap: 1rem; justify-items: center; }
+      .kicker-select { appearance: none; border: 1px dashed transparent; background: none; padding: 0.3rem 0.6rem; cursor: pointer; text-align: center;
+        font: 600 0.72rem/1 var(--sans); letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
+      .kicker-select:hover, .kicker-select:focus { border-color: var(--line); outline: none; }
+      textarea.h1-input, textarea.lead-input { width: 100%; border: 1px dashed transparent; background: none; resize: none; overflow: hidden; text-align: center; color: var(--text); padding: 0.2rem 0.4rem; }
+      .h1-input { font-family: var(--serif); font-size: var(--step-5); line-height: 1.04; letter-spacing: -0.01em; }
+      .lead-input { font-family: var(--sans); font-size: var(--step-1); line-height: 1.55; color: var(--muted) !important; max-width: 40rem; }
+      .h1-input:hover, .lead-input:hover, .h1-input:focus, .lead-input:focus { border-color: var(--line); outline: none; }
+      .h1-input::placeholder, .lead-input::placeholder { color: #b9b2a6; }
+      .count { font-size: 0.75rem; color: var(--muted); margin-top: -0.6rem; }
+      .count.is-warn { color: #a0471f; }
+
+      .hero { display: grid; place-items: center; min-height: 380px; margin: 1rem var(--gutter) 0; background: var(--paper); border: 1px dashed #b9b2a6; cursor: pointer; overflow: hidden; color: var(--muted); text-align: center; }
+      .hero.is-over { background: var(--gold-soft); border-color: var(--accent); }
+      .hero img { width: 100%; max-height: 82vh; object-fit: cover; }
+      .hero__hint { padding: 2rem; }
+      .alt-input { display: block; width: calc(100% - 2 * var(--gutter)); margin: 0.5rem var(--gutter) 0; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 0.5rem 0; font: inherit; font-size: 0.88rem; color: var(--muted); }
+      .alt-input:focus { outline: none; border-bottom-color: var(--text); }
+
+      .read { max-width: 680px; margin: clamp(2rem, 4vw, 3rem) auto 0; padding-inline: var(--gutter); }
+      .disclosure { display: flex; gap: 0.4rem; align-items: baseline; font-size: 0.9rem; color: var(--muted); border-left: 2px solid var(--gold-soft); padding: 0.25rem 0 0.25rem 1rem; margin-bottom: 2rem; }
+      .disclosure strong { color: var(--text); font-weight: 600; white-space: nowrap; }
+      .disclosure input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; color: inherit; padding: 0; }
+      .disclosure input:focus { outline: none; }
+
+      .toolbar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.45rem; background: var(--surface); border: 1px solid var(--line); margin-bottom: 1rem; }
+      .toolbar button, .tool-img { background: var(--bg); border: 1px solid var(--line); padding: 0.35rem 0.7rem; font: inherit; font-size: 0.85rem; cursor: pointer; min-height: 36px; display: inline-flex; align-items: center; }
+      .toolbar button:hover, .tool-img:hover { border-color: var(--text); }
+      .body { min-height: 18rem; outline: none; padding: 0.25rem 0; }
+      .body:empty::before { content: attr(data-placeholder); color: #b9b2a6; }
+      .body :global(figure) { margin: 2.2em 0; position: relative; }
+      .body :global(figure img) { width: 100%; margin: 0; }
+      .body :global(figure figcaption) { font-size: 0.85rem; color: var(--muted); margin-top: 0.4rem; }
+      .body :global(figure:hover)::after { content: 'Bild entfernen: anklicken und Entf drücken'; position: absolute; top: 0.5rem; right: 0.5rem; background: rgb(0 0 0 / 0.6); color: #fff; font-size: 0.75rem; padding: 0.2rem 0.5rem; }
+      .body :global(figure.is-selected) { outline: 2px solid var(--accent); }
+
+      .hint { font-size: 0.85rem; color: var(--muted); margin: 0.75rem 0 0.5rem; }
+      .places, .faq { margin-top: clamp(3rem, 6vw, 4.5rem); }
+      .places h2, .faq h2 { font-size: var(--step-3); padding-bottom: 1rem; border-bottom: 1px solid var(--text); }
+      .places ul { list-style: none; padding: 0; margin: 0; }
+      .place { padding-block: 1.75rem; border-bottom: 1px solid var(--line); display: grid; gap: 0.5rem; }
+      .place input, .place select { border: 0; border-bottom: 1px dashed var(--line); background: none; font: inherit; color: inherit; padding: 0.2rem 0; width: 100%; min-width: 0; }
+      .place input:focus, .place select:focus { outline: none; border-bottom-color: var(--text); }
+      .place__head { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; }
+      .place__head h3 { font-size: var(--step-2); }
+      .place__name { font-family: var(--serif) !important; font-size: var(--step-2) !important; }
+      .price { display: flex; gap: 0.15rem; flex-shrink: 0; }
+      .price button { border: 1px solid var(--line); background: none; font: 600 0.75rem/1 var(--sans); color: var(--muted); padding: 0.35rem 0.45rem; cursor: pointer; letter-spacing: 0.05em; }
+      .price button[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); color: #fff; }
+      .place__summary { color: var(--muted) !important; }
+      .place dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.9rem 1.5rem; margin: 0.75rem 0 0; font-size: 0.93rem; }
+      .place dt { font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+      .place dd { margin: 0.15rem 0 0; }
+      .place dd.two { display: grid; grid-template-columns: 70px 1fr; gap: 0.5rem; }
+      .place__foot { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-top: 0.75rem; }
+      .place__img { width: 56px; height: 56px; object-fit: cover; }
+      .geo { font-size: 0.8rem; color: var(--muted); flex: 1; min-width: 200px; }
+      .geo.ok { color: #3c6e3c; }
+      .geo.bad { color: #a0471f; }
+      .add-row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.25rem; }
+      .add-row .select { flex: 1; min-width: 220px; }
+
+      .faq-item { display: grid; gap: 0.4rem; padding-block: 1rem; border-bottom: 1px solid var(--line); }
+      .faq-item input { font-family: var(--serif); font-size: var(--step-1); border: 0; background: none; padding: 0.2rem 0; }
+      .faq-item textarea { border: 0; background: none; font: inherit; resize: vertical; padding: 0.2rem 0; color: #3a3833; }
+      .faq-item input:focus, .faq-item textarea:focus { outline: none; background: var(--paper); }
+      .faq-item .link { justify-self: start; }
+      .faq .btn { margin-top: 1rem; }
+
+      .en { margin-top: 3rem; border-top: 1px solid var(--line); padding-top: 1.5rem; }
+      .en summary { cursor: pointer; font-weight: 600; }
+      .en .stack { margin-top: 1rem; }
+      .textarea.short { min-height: 5rem; }
+
       .check { display: flex; gap: 0.6rem; align-items: center; font-size: 0.95rem; cursor: pointer; }
       .check input { width: 18px; height: 18px; accent-color: var(--text); }
-      .slug { display: flex; align-items: center; gap: 0.3rem; color: var(--muted); }
-      .slug .input { min-height: 40px; font-size: 0.9rem; }
+      .slug { display: flex; align-items: center; gap: 0.3rem; color: var(--muted); font-size: 0.85rem; }
+      .slug .input { min-height: 40px; font-size: 0.88rem; }
       .btn--wide { width: 100%; }
       .btn[disabled] { opacity: 0.6; cursor: wait; }
       .status { font-size: 0.92rem; line-height: 1.5; }
       .status:empty { display: none; }
       .status.is-error { color: #a0471f; }
-      .status a { color: var(--accent-ink); font-weight: 600; }
+      .status :global(a) { color: var(--accent-ink); font-weight: 600; }
       .posts { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.6rem; font-size: 0.9rem; }
       .posts li { display: grid; }
       .posts a { text-decoration: none; }
       .posts span { color: var(--muted); font-size: 0.78rem; }
-      @media (max-width: 900px) {
+      .card .small { margin-top: 1rem; }
+      .mobile-bar { display: none; }
+
+      @media (max-width: 1000px) {
         .editor { grid-template-columns: 1fr; }
-        .editor__side { position: static; }
+        .side { position: static; }
+        .sheet { margin-inline: calc(-1 * var(--gutter)); border-inline: 0; }
+        .mobile-bar { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; padding: 0.75rem var(--gutter); background: var(--surface); border-top: 1px solid var(--line); }
+        .hero { min-height: 240px; }
       }
     </style>
 
     <script>
-      type Pending = { path: string; data: Blob };
+      type Upload = { path: string; data: Blob };
 
       const app = document.querySelector<HTMLElement>('.app')!;
       const REPO = app.dataset.repo!;
       const BRANCH = app.dataset.branch!;
       const SITE = new URL(app.dataset.base!, app.dataset.site).href;
       const API = `https://api.github.com/repos/${REPO}`;
-      const existing: string[] = JSON.parse(document.getElementById('existing')!.textContent!);
+      const DATA = JSON.parse(document.getElementById('data')!.textContent!) as { posts: string[]; places: string[] };
       const KEY = 'zf-redaktion-token';
-      const DRAFT = 'zf-redaktion-draft';
+      const DRAFT = 'zf-redaktion-draft-v2';
+      const IMG_DIR = 'src/content/posts/images';
 
-      const $ = <T extends Element = HTMLElement>(s: string) => document.querySelector<T>(s)!;
+      const $ = <T extends Element = HTMLElement>(s: string, root: ParentNode = document) => root.querySelector<T>(s)!;
+      const $$ = <T extends Element = HTMLElement>(s: string, root: ParentNode = document) => [...root.querySelectorAll<T>(s)];
       const login = $('[data-login]');
       const editor = $<HTMLFormElement>('[data-editor]');
       const logout = $<HTMLButtonElement>('[data-logout]');
       const statusEl = $('[data-status]');
-      const submitBtn = $<HTMLButtonElement>('[data-submit]');
+      const submitBtns = $$<HTMLButtonElement>('button[type="submit"]', editor);
+      const field = (n: string) => editor.elements.namedItem(n) as HTMLInputElement;
+      const val = (n: string) => (field(n)?.value ?? '').trim();
 
       const store = {
         get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } },
         set: (k: string, v: string) => { try { localStorage.setItem(k, v); } catch {} },
         del: (k: string) => { try { localStorage.removeItem(k); } catch {} },
       };
-      let token = store.get(KEY) ?? '';
+      const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+      const slugify = (s: string) =>
+        s.toLowerCase()
+          .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+          .normalize('NFD').replace(/[̀-ͯ]/g, '')
+          .replace(/&/g, ' und ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70).replace(/-+$/, '');
 
+      // ---------- GitHub ----------
+      let token = store.get(KEY) ?? '';
       async function gh(path: string, init: RequestInit = {}) {
-        const res = await fetch(path.startsWith('http') ? path : `${API}${path}`, {
+        const res = await fetch(`${API}${path}`, {
           ...init,
           headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', ...(init.body ? { 'Content-Type': 'application/json' } : {}) },
         });
         if (!res.ok && res.status !== 404) {
           const msg = await res.json().catch(() => ({}));
-          throw new Error(`${res.status}: ${(msg as any).message ?? res.statusText}`);
+          throw new Error(`${res.status}: ${(msg as { message?: string }).message ?? res.statusText}`);
         }
         return res;
       }
@@ -261,69 +403,73 @@ const today = new Date().toISOString().slice(0, 10);
         login.hidden = on;
         editor.hidden = !on;
         logout.hidden = !on;
+        if (on) autosizeAll();
       }
-
-      async function verify(t: string) {
-        token = t;
-        const res = await gh('');
-        if (res.status === 404) throw new Error('Repository nicht gefunden. Hat der Token Zugriff auf ' + REPO + '?');
-        const repo = await res.json();
-        if (!repo.permissions?.push) throw new Error('Der Token hat keine Schreibrechte (Contents: Read and write).');
-      }
-
       $<HTMLFormElement>('[data-login-form]').addEventListener('submit', async (e) => {
         e.preventDefault();
         const err = $('[data-login-error]');
         err.textContent = '';
-        const t = $<HTMLInputElement>('#token').value.trim();
+        token = $<HTMLInputElement>('#token').value.trim();
         try {
-          await verify(t);
-          store.set(KEY, t);
+          const res = await gh('');
+          if (res.status === 404) throw new Error(`Repository nicht gefunden. Hat der Token Zugriff auf ${REPO}?`);
+          const repo = await res.json();
+          if (!repo.permissions?.push) throw new Error('Der Token hat keine Schreibrechte (Contents: Read and write).');
+          store.set(KEY, token);
           showEditor(true);
         } catch (ex) {
-          err.textContent = ex instanceof Error && ex.message.startsWith('401') ? 'Token ungültig oder abgelaufen.' : String((ex as Error).message);
+          const m = (ex as Error).message;
+          err.textContent = m.startsWith('401') ? 'Token ungültig oder abgelaufen.' : m;
         }
       });
       logout.addEventListener('click', () => { store.del(KEY); token = ''; showEditor(false); });
-      if (token) showEditor(true);
 
-      // ---------- Slug ----------
-      const slugify = (s: string) =>
-        s.toLowerCase()
-          .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
-          .normalize('NFD').replace(/[̀-ͯ]/g, '')
-          .replace(/&/g, ' und ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 70).replace(/-+$/, '');
-      const titleEl = $<HTMLInputElement>('#title');
-      const slugEl = $<HTMLInputElement>('#slug');
+      // ---------- Kopf ----------
+      function autosize(t: HTMLTextAreaElement) { t.style.height = 'auto'; t.style.height = `${t.scrollHeight}px`; }
+      function autosizeAll() { $$<HTMLTextAreaElement>('[data-autosize]').forEach(autosize); }
+      $$<HTMLTextAreaElement>('[data-autosize]').forEach((t) => {
+        t.addEventListener('input', () => autosize(t));
+        t.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
+      });
+      const count = $('[data-count]');
+      const meta = $('[data-meta]');
+      const slugEl = field('slug');
       let slugTouched = false;
-      titleEl.addEventListener('input', () => { if (!slugTouched) slugEl.value = slugify(titleEl.value); });
+      function updateHead() {
+        const n = val('description').length;
+        count.textContent = `${n} / 160 Zeichen`;
+        count.classList.toggle('is-warn', n > 0 && (n < 50 || n > 170));
+        const authors = $$<HTMLInputElement>('input[name="authors"]:checked', editor).map((i) => i.value);
+        const d = new Date(`${val('date') || new Date().toISOString().slice(0, 10)}T12:00:00`);
+        const names = authors.length > 1 ? `${authors.slice(0, -1).join(', ')} und ${authors.at(-1)}` : authors.join('');
+        meta.textContent = `${names ? `Von ${names} · ` : ''}${d.toLocaleDateString('de-CH', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+        if (!slugTouched) slugEl.value = slugify(val('title'));
+        $('[data-slug-prefix]').textContent = `…/${val('category')}/`;
+      }
+      editor.addEventListener('input', updateHead);
+      editor.addEventListener('change', updateHead);
       slugEl.addEventListener('input', () => { slugTouched = true; slugEl.value = slugify(slugEl.value); });
 
-      // ---------- Zeichen zählen ----------
-      const desc = $<HTMLTextAreaElement>('#description');
-      const count = $('[data-count="description"]');
-      const updCount = () => { const n = desc.value.length; count.textContent = `${n} / 160`; count.classList.toggle('is-warn', n > 0 && (n < 50 || n > 170)); };
-      desc.addEventListener('input', updCount);
-
       // ---------- Bilder ----------
-      const pending: Pending[] = [];
+      const uploads = new Map<string, Blob>(); // Pfad im Repo -> Bild
       async function compress(file: File, max = 1800): Promise<Blob> {
         const bmp = await createImageBitmap(file).catch(() => null);
         if (!bmp) return file;
         const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(bmp.width * scale);
-        canvas.height = Math.round(bmp.height * scale);
-        canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height);
-        return new Promise((r) => canvas.toBlob((b) => r(b ?? file), 'image/jpeg', 0.86));
+        const c = document.createElement('canvas');
+        c.width = Math.round(bmp.width * scale);
+        c.height = Math.round(bmp.height * scale);
+        c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height);
+        return new Promise((r) => c.toBlob((b) => r(b ?? file), 'image/jpeg', 0.86));
       }
+      const uid = () => Math.random().toString(36).slice(2, 7);
 
       let cover: Blob | null = null;
       const coverInput = $<HTMLInputElement>('[data-cover]');
       const coverPreview = $<HTMLImageElement>('[data-cover-preview]');
       const drop = $('[data-drop]');
       async function setCover(file?: File) {
-        if (!file || !file.type.startsWith('image/')) return;
+        if (!file?.type.startsWith('image/')) return;
         cover = await compress(file);
         coverPreview.src = URL.createObjectURL(cover);
         coverPreview.hidden = false;
@@ -334,201 +480,441 @@ const today = new Date().toISOString().slice(0, 10);
       drop.addEventListener('dragleave', () => drop.classList.remove('is-over'));
       drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('is-over'); setCover((e as DragEvent).dataTransfer?.files?.[0]); });
 
-      // ---------- Toolbar ----------
-      const body = $<HTMLTextAreaElement>('#body');
-      const previews = new Map<string, string>();
-      function insert(before: string, after = '', placeholder = '') {
-        const { selectionStart: s, selectionEnd: e, value } = body;
-        const sel = value.slice(s, e) || placeholder;
-        body.setRangeText(before + sel + after, s, e, 'end');
+      // ---------- Text-Editor ----------
+      const body = $('[data-body]');
+      document.execCommand('defaultParagraphSeparator', false, 'p');
+      let savedRange: Range | null = null;
+      document.addEventListener('selectionchange', () => {
+        const sel = getSelection();
+        if (sel?.rangeCount && body.contains(sel.anchorNode)) savedRange = sel.getRangeAt(0).cloneRange();
+      });
+      function restore() {
         body.focus();
-        body.dispatchEvent(new Event('input'));
+        if (savedRange) { const s = getSelection()!; s.removeAllRanges(); s.addRange(savedRange); }
       }
-      document.querySelectorAll<HTMLButtonElement>('[data-md]').forEach((b) =>
+      function ensureParagraph() {
+        if (!body.innerHTML.trim()) body.innerHTML = '<p><br></p>';
+      }
+      $$<HTMLButtonElement>('[data-cmd]').forEach((b) =>
+        b.addEventListener('mousedown', (e) => e.preventDefault()),
+      );
+      $$<HTMLButtonElement>('[data-cmd]').forEach((b) =>
         b.addEventListener('click', () => {
-          const t = b.dataset.md;
-          if (t === 'h2') insert('\n\n## ', '\n\n', 'Zwischentitel');
-          if (t === 'bold') insert('**', '**', 'fetter Text');
-          if (t === 'italic') insert('*', '*', 'kursiver Text');
-          if (t === 'list') insert('\n- ', '', 'Punkt');
-          if (t === 'link') {
+          restore();
+          ensureParagraph();
+          const c = b.dataset.cmd;
+          if (c === 'p') document.execCommand('formatBlock', false, 'p');
+          if (c === 'h2') document.execCommand('formatBlock', false, 'h2');
+          if (c === 'bold') document.execCommand('bold');
+          if (c === 'italic') document.execCommand('italic');
+          if (c === 'list') document.execCommand('insertUnorderedList');
+          if (c === 'link') {
             const url = prompt('Link-Adresse (https://…)');
-            if (url) insert('[', `](${url})`, 'Linktext');
+            if (url) document.execCommand('createLink', false, /^https?:\/\//.test(url) ? url : `https://${url}`);
           }
+          saveDraft();
         }),
       );
+      body.addEventListener('focus', ensureParagraph);
+      body.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const text = e.clipboardData?.getData('text/plain') ?? '';
+        const html = text.split(/\n{2,}/).map((p) => `<p>${esc(p).replace(/\n/g, '<br>')}</p>`).join('');
+        document.execCommand('insertHTML', false, html);
+      });
+      body.addEventListener('click', (e) => {
+        $$('figure.is-selected', body).forEach((f) => f.classList.remove('is-selected'));
+        const fig = (e.target as HTMLElement).closest('figure');
+        if (fig) fig.classList.add('is-selected');
+      });
+      body.addEventListener('keydown', (e) => {
+        const fig = $('figure.is-selected', body) as HTMLElement | null;
+        if (fig && (e.key === 'Backspace' || e.key === 'Delete')) { e.preventDefault(); fig.remove(); saveDraft(); }
+      });
+
       const inlineInput = $<HTMLInputElement>('[data-inline]');
+      inlineInput.addEventListener('mousedown', () => restore());
       inlineInput.addEventListener('change', async () => {
         const file = inlineInput.files?.[0];
-        if (!file) return;
-        const alt = prompt('Was ist auf dem Bild zu sehen?') ?? '';
-        const blob = await compress(file);
-        const name = `${slugEl.value || 'bild'}-${Date.now().toString(36)}.jpg`;
-        const path = `src/content/posts/images/${name}`;
-        pending.push({ path, data: blob });
-        previews.set(`../images/${name}`, URL.createObjectURL(blob));
-        insert(`\n\n![${alt.replace(/[\[\]]/g, '')}](../images/${name})\n\n`);
         inlineInput.value = '';
+        if (!file) return;
+        const alt = (prompt('Was ist auf dem Bild zu sehen? (Bildunterschrift)') ?? '').trim();
+        const blob = await compress(file);
+        const name = `${slugEl.value || 'bild'}-${uid()}.jpg`;
+        uploads.set(`${IMG_DIR}/${name}`, blob);
+        restore();
+        ensureParagraph();
+        document.execCommand('insertHTML', false,
+          `<figure contenteditable="false" data-src="${name}"><img src="${URL.createObjectURL(blob)}" alt="${esc(alt)}">${alt ? `<figcaption>${esc(alt)}</figcaption>` : ''}</figure><p><br></p>`);
       });
 
-      // ---------- Vorschau (einfaches Markdown) ----------
-      const preview = $('[data-preview]');
-      const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
-      function md(src: string) {
-        const inline = (s: string) => esc(s)
-          .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_, a, u) => `<img alt="${a}" src="${previews.get(u) ?? u}">`)
-          .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-          .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-          .replace(/\*([^*]+)\*/g, '<em>$1</em>');
-        return src.trim().split(/\n{2,}/).map((block) => {
-          if (block.startsWith('## ')) return `<h2>${inline(block.slice(3))}</h2>`;
-          if (block.startsWith('### ')) return `<h3>${inline(block.slice(4))}</h3>`;
-          if (/^- /m.test(block) && block.split('\n').every((l) => l.startsWith('- '))) return `<ul>${block.split('\n').map((l) => `<li>${inline(l.slice(2))}</li>`).join('')}</ul>`;
-          if (/^!\[[^\]]*\]\([^)]+\)$/.test(block.trim())) return inline(block.trim());
-          return `<p>${inline(block).replace(/\n/g, '<br>')}</p>`;
-        }).join('');
+      // HTML -> Markdown
+      function inlineMd(node: Node): string {
+        if (node.nodeType === Node.TEXT_NODE) return (node.textContent ?? '').replace(/ /g, ' ').replace(/([*_`\\])/g, '\\$1');
+        if (!(node instanceof HTMLElement)) return '';
+        const inner = () => [...node.childNodes].map(inlineMd).join('');
+        switch (node.tagName) {
+          case 'B': case 'STRONG': { const t = inner(); return t.trim() ? `**${t}**` : t; }
+          case 'I': case 'EM': { const t = inner(); return t.trim() ? `*${t}*` : t; }
+          case 'A': return `[${inner()}](${node.getAttribute('href')})`;
+          case 'BR': return '  \n';
+          case 'FIGURE': return '';
+          default: return inner();
+        }
       }
-      const previewBtn = $<HTMLButtonElement>('[data-preview-toggle]');
-      previewBtn.addEventListener('click', () => {
-        const on = preview.hidden;
-        if (on) preview.innerHTML = md(body.value);
-        preview.hidden = !on;
-        body.hidden = on;
-        previewBtn.textContent = on ? 'Bearbeiten' : 'Vorschau';
+      function figureMd(f: HTMLElement) {
+        const alt = (f.querySelector('img')?.getAttribute('alt') ?? '').replace(/[\[\]]/g, '');
+        return `![${alt}](../images/${f.dataset.src})`;
+      }
+      function toMarkdown(root: HTMLElement): string {
+        const out: string[] = [];
+        root.childNodes.forEach((n) => {
+          if (n.nodeType === Node.TEXT_NODE) { const t = inlineMd(n).trim(); if (t) out.push(t); return; }
+          if (!(n instanceof HTMLElement)) return;
+          const tag = n.tagName;
+          if (tag === 'FIGURE') { out.push(figureMd(n)); return; }
+          n.querySelectorAll('figure').forEach((f) => out.push(figureMd(f as HTMLElement)));
+          const t = inlineMd(n).replace(/\s+\n/g, '  \n').trim().replace(/ {2}$/, '');
+          if (tag === 'H2' || tag === 'H1') { if (t) out.push(`## ${t.replace(/\*\*/g, '')}`); return; }
+          if (tag === 'H3') { if (t) out.push(`### ${t}`); return; }
+          if (tag === 'UL' || tag === 'OL') {
+            const items = [...n.children].map((li, i) => `${tag === 'OL' ? `${i + 1}.` : '-'} ${inlineMd(li).trim()}`);
+            out.push(items.join('\n'));
+            return;
+          }
+          if (t) out.push(t);
+        });
+        return out.join('\n\n');
+      }
+
+      // ---------- Adressen ----------
+      const placeList = $('[data-places]');
+      const KREIS: Record<string, string> = {
+        '8001': 'Kreis 1', '8002': 'Kreis 2', '8003': 'Kreis 3', '8004': 'Kreis 4', '8005': 'Kreis 5', '8006': 'Kreis 6',
+        '8008': 'Kreis 8', '8032': 'Kreis 7', '8037': 'Kreis 10', '8038': 'Kreis 2', '8041': 'Kreis 2', '8044': 'Kreis 7',
+        '8045': 'Kreis 3', '8046': 'Kreis 11', '8047': 'Kreis 9', '8048': 'Kreis 9', '8049': 'Kreis 10', '8050': 'Kreis 11',
+        '8051': 'Kreis 12', '8052': 'Kreis 11', '8053': 'Kreis 7', '8055': 'Kreis 3', '8057': 'Kreis 6', '8064': 'Kreis 9',
+      };
+      const DEFAULT_TYPE: Record<string, string> = { food: 'Restaurant', hotels: 'Hotel', 'stores-brands': 'Store', erlebnisse: 'Event' };
+
+      function addPlace(data: Record<string, string> = {}) {
+        const li = ($<HTMLTemplateElement>('#place-tpl').content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
+        li.dataset.key = uid();
+        const f = (n: string) => li.querySelector<HTMLInputElement>(`[data-f="${n}"]`)!;
+        f('type').value = data.type ?? DEFAULT_TYPE[val('category')] ?? 'Restaurant';
+        Object.entries(data).forEach(([k, v]) => { if (k !== 'type' && f(k)) f(k).value = v; });
+        if (data.price) li.dataset.price = data.price;
+        if (data.lat) { li.dataset.lat = data.lat; li.dataset.lng = data.lng; setGeo(li, 'ok'); }
+        syncPrice(li);
+        placeList.append(li);
+        return li;
+      }
+      function syncPrice(li: HTMLElement) {
+        $$<HTMLButtonElement>('[data-price]', li).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.price === li.dataset.price)));
+      }
+      function setGeo(li: HTMLElement, state: 'ok' | 'bad' | 'busy') {
+        const g = $('[data-geo]', li);
+        g.className = `geo ${state === 'busy' ? '' : state}`;
+        g.textContent = state === 'ok' ? `✓ Position gefunden (${Number(li.dataset.lat).toFixed(4)}, ${Number(li.dataset.lng).toFixed(4)})`
+          : state === 'bad' ? '✗ Adresse nicht gefunden. Bitte Strasse, PLZ und Ort prüfen.'
+          : 'Suche Position …';
+      }
+      let geoQueue = Promise.resolve();
+      function geocode(li: HTMLElement) {
+        const f = (n: string) => li.querySelector<HTMLInputElement>(`[data-f="${n}"]`)!.value.trim();
+        const plz = f('postalCode');
+        if (!f('city') && !plz) return Promise.resolve(false);
+        delete li.dataset.lat; delete li.dataset.lng;
+        setGeo(li, 'busy');
+        geoQueue = geoQueue.then(async () => {
+          const tries = [
+            new URLSearchParams({ street: f('street'), postalcode: plz, city: f('city'), country: 'Schweiz' }),
+            new URLSearchParams({ q: `${f('name')}, ${f('city')}` }),
+          ];
+          for (const q of tries) {
+            q.set('format', 'jsonv2'); q.set('addressdetails', '1'); q.set('limit', '1'); q.set('countrycodes', 'ch'); q.set('accept-language', 'de');
+            const r = await fetch(`https://nominatim.openstreetmap.org/search?${q}`).then((x) => x.json()).catch(() => []);
+            await new Promise((ok) => setTimeout(ok, 1100)); // Nominatim: max. 1 Anfrage pro Sekunde
+            if (r[0]) {
+              li.dataset.lat = r[0].lat; li.dataset.lng = r[0].lon;
+              const area = li.querySelector<HTMLInputElement>('[data-f="area"]')!;
+              const a = r[0].address ?? {};
+              if (!area.value) area.value = (/^Kreis \d+$/.test(a.city_district ?? '') ? a.city_district : '') || KREIS[plz] || a.state || '';
+              setGeo(li, 'ok');
+              return;
+            }
+          }
+          setGeo(li, 'bad');
+        });
+        return geoQueue.then(() => Boolean(li.dataset.lat));
+      }
+      placeList.addEventListener('click', (e) => {
+        const t = e.target as HTMLElement;
+        const li = t.closest<HTMLElement>('.place');
+        if (!li) return;
+        if (t.dataset.price) { li.dataset.price = li.dataset.price === t.dataset.price ? '' : t.dataset.price; syncPrice(li); saveDraft(); }
+        if (t.hasAttribute('data-remove')) { li.remove(); saveDraft(); }
+      });
+      placeList.addEventListener('change', async (e) => {
+        const t = e.target as HTMLInputElement;
+        const li = t.closest<HTMLElement>('.place')!;
+        if (['street', 'postalCode', 'city'].includes(t.dataset.f ?? '')) geocode(li);
+        if (t.matches('[data-place-img]') && t.files?.[0]) {
+          const blob = await compress(t.files[0], 1200);
+          li.dataset.img = uid();
+          uploads.set(`place:${li.dataset.img}`, blob);
+          const img = $<HTMLImageElement>('[data-place-preview]', li);
+          img.src = URL.createObjectURL(blob);
+          img.hidden = false;
+        }
+      });
+      $('[data-add-place]').addEventListener('click', () => { const li = addPlace(); $<HTMLInputElement>('[data-f="name"]', li).focus(); });
+      const existingSel = $<HTMLSelectElement>('[data-existing]');
+      existingSel.addEventListener('change', () => {
+        const id = existingSel.value;
+        if (!id || $$('.place--existing', placeList).some((l) => l.dataset.id === id)) { existingSel.value = ''; return; }
+        const li = ($<HTMLTemplateElement>('#existing-tpl').content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
+        li.dataset.id = id;
+        $('[data-name]', li).textContent = existingSel.selectedOptions[0].textContent;
+        placeList.append(li);
+        existingSel.value = '';
+        saveDraft();
       });
 
-      // ---------- Entwurf lokal sichern ----------
-      const fields = ['title', 'description', 'imageAlt', 'body', 'title_en', 'description_en', 'imageAlt_en', 'body_en', 'category', 'disclosure'];
-      const saved = JSON.parse(store.get(DRAFT) ?? '{}');
-      fields.forEach((f) => { const el = editor.elements.namedItem(f) as HTMLInputElement | null; if (el && saved[f]) el.value = saved[f]; });
-      if (saved.title && !slugEl.value) slugEl.value = slugify(saved.title);
-      updCount();
-      editor.addEventListener('input', () => {
-        const d: Record<string, string> = {};
-        fields.forEach((f) => { d[f] = (editor.elements.namedItem(f) as HTMLInputElement).value; });
-        store.set(DRAFT, JSON.stringify(d));
-      });
+      // ---------- FAQ ----------
+      const faqs = $('[data-faqs]');
+      function addFaq(q = '', a = '') {
+        const el = ($<HTMLTemplateElement>('#faq-tpl').content.firstElementChild as HTMLElement).cloneNode(true) as HTMLElement;
+        $<HTMLInputElement>('[data-q]', el).value = q;
+        $<HTMLTextAreaElement>('[data-a]', el).value = a;
+        faqs.append(el);
+        return el;
+      }
+      $('[data-add-faq]').addEventListener('click', () => $<HTMLInputElement>('[data-q]', addFaq()).focus());
+      faqs.addEventListener('click', (e) => { if ((e.target as HTMLElement).hasAttribute('data-remove')) { (e.target as HTMLElement).closest('.faq-item')!.remove(); saveDraft(); } });
+
+      // ---------- Entwurf im Browser sichern ----------
+      const SIMPLE = ['category', 'title', 'description', 'imageAlt', 'disclosure', 'title_en', 'description_en', 'body_en'];
+      function collectPlaces() {
+        return $$('.place', placeList).map((li) => {
+          if (li.dataset.id) return { existing: li.dataset.id, label: $('[data-name]', li).textContent ?? '' };
+          const d: Record<string, string> = {};
+          $$<HTMLInputElement>('[data-f]', li).forEach((i) => { d[i.dataset.f!] = i.value.trim(); });
+          d.price = li.dataset.price ?? '';
+          d.lat = li.dataset.lat ?? '';
+          d.lng = li.dataset.lng ?? '';
+          return d;
+        });
+      }
+      function collectFaqs() {
+        return $$('.faq-item', faqs).map((el) => ({ q: $<HTMLInputElement>('[data-q]', el).value.trim(), a: $<HTMLTextAreaElement>('[data-a]', el).value.trim() })).filter((f) => f.q && f.a);
+      }
+      let saveTimer = 0;
+      function saveDraft() {
+        clearTimeout(saveTimer);
+        saveTimer = window.setTimeout(() => {
+          const d: Record<string, unknown> = {};
+          SIMPLE.forEach((n) => { d[n] = field(n).value; });
+          const clone = body.cloneNode(true) as HTMLElement;
+          clone.querySelectorAll('figure').forEach((f) => f.remove());
+          d.body = clone.innerHTML;
+          d.places = collectPlaces();
+          d.faqs = $$('.faq-item', faqs).map((el) => ({ q: $<HTMLInputElement>('[data-q]', el).value, a: $<HTMLTextAreaElement>('[data-a]', el).value }));
+          store.set(DRAFT, JSON.stringify(d));
+        }, 400);
+      }
+      editor.addEventListener('input', saveDraft);
+      editor.addEventListener('change', saveDraft);
+      function loadDraft() {
+        const d = JSON.parse(store.get(DRAFT) ?? '{}');
+        SIMPLE.forEach((n) => { if (d[n]) field(n).value = d[n]; });
+        if (d.body) body.innerHTML = d.body;
+        (d.places ?? []).forEach((p: Record<string, string>) => {
+          if (p.existing) {
+            existingSel.value = p.existing;
+            existingSel.dispatchEvent(new Event('change'));
+          } else addPlace(p);
+        });
+        (d.faqs ?? []).forEach((f: { q: string; a: string }) => addFaq(f.q, f.a));
+        updateHead();
+      }
+      function resetAll() {
+        store.del(DRAFT);
+        editor.reset();
+        field('date').value = new Date().toISOString().slice(0, 10);
+        body.innerHTML = '';
+        placeList.innerHTML = '';
+        faqs.innerHTML = '';
+        cover = null;
+        coverPreview.hidden = true;
+        $('[data-cover-hint]').hidden = false;
+        uploads.clear();
+        slugTouched = false;
+        updateHead();
+        autosizeAll();
+      }
+      $('[data-clear]').addEventListener('click', () => { if (confirm('Wirklich alles leeren?')) { resetAll(); statusEl.textContent = ''; } });
 
       // ---------- Veröffentlichen ----------
       const yaml = (v: string) => JSON.stringify(v);
-      function frontmatter(o: { title: string; description: string; category: string; date: string; authors: string[]; image: string; imageAlt: string; featured: boolean; draft: boolean; disclosure: string; urlSlug?: string }) {
-        const lines = [
-          '---',
-          `title: ${yaml(o.title)}`,
-          `description: ${yaml(o.description)}`,
-          ...(o.urlSlug ? [`urlSlug: ${yaml(o.urlSlug)}`] : []),
-          `category: ${o.category}`,
-          `date: ${o.date}`,
-          `authors: [${o.authors.map(yaml).join(', ')}]`,
-          `image: ${o.image}`,
-          `imageAlt: ${yaml(o.imageAlt)}`,
-          ...(o.featured ? ['featured: true'] : []),
-          ...(o.draft ? ['draft: true'] : []),
-          ...(o.disclosure ? [`disclosure: ${yaml(o.disclosure)}`] : []),
-          '---',
-          '',
-        ];
-        return lines.join('\n');
+      function setStatus(html: string, error = false) {
+        statusEl.innerHTML = html;
+        statusEl.classList.toggle('is-error', error);
+        if (error || html) statusEl.scrollIntoView({ block: 'nearest' });
       }
-
       async function toBase64(data: Blob | string) {
         const blob = typeof data === 'string' ? new Blob([data], { type: 'text/plain;charset=utf-8' }) : data;
         const url: string = await new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result as string); fr.readAsDataURL(blob); });
         return url.slice(url.indexOf(',') + 1);
       }
-
-      function resetForm() {
-        editor.reset();
-        $<HTMLInputElement>('#date').value = new Date().toISOString().slice(0, 10);
-        cover = null;
-        coverPreview.hidden = true;
-        $('[data-cover-hint]').hidden = false;
-        pending.length = 0;
-        slugTouched = false;
-        if (!preview.hidden) previewBtn.click();
-        updCount();
-      }
-
-      function setStatus(html: string, error = false) {
-        statusEl.innerHTML = html;
-        statusEl.classList.toggle('is-error', error);
-      }
+      const normUrl = (u: string) => (!u ? '' : /^https?:\/\//.test(u) ? u : `https://${u}`);
 
       editor.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const v = (n: string) => ((editor.elements.namedItem(n) as HTMLInputElement).value ?? '').trim();
-        const checked = (n: string) => (editor.elements.namedItem(n) as HTMLInputElement).checked;
-        const slug = slugify(slugEl.value || v('title'));
-        const authors = [...editor.querySelectorAll<HTMLInputElement>('input[name="authors"]:checked')].map((i) => i.value);
+        updateHead();
+        const slug = slugify(slugEl.value || val('title'));
+        const authors = $$<HTMLInputElement>('input[name="authors"]:checked', editor).map((i) => i.value);
+        const markdown = toMarkdown(body);
+        const placeData = collectPlaces();
+        const newPlaces = placeData.filter((p) => !('existing' in p)) as Record<string, string>[];
 
         const problems: string[] = [];
-        if (!v('title')) problems.push('Titel fehlt.');
-        if (v('description').length < 50) problems.push('Kurzbeschreibung: mindestens 50 Zeichen.');
+        if (!val('title')) problems.push('Titel fehlt.');
+        if (val('description').length < 50) problems.push('Kurzbeschreibung: mindestens 50 Zeichen.');
         if (!cover) problems.push('Titelbild fehlt.');
-        if (!v('imageAlt')) problems.push('Bildbeschreibung fehlt.');
-        if (v('body').length < 30) problems.push('Text ist zu kurz.');
+        if (!val('imageAlt')) problems.push('Bildbeschreibung unter dem Titelbild fehlt.');
+        if (markdown.length < 30) problems.push('Der Text ist zu kurz.');
         if (!authors.length) problems.push('Mindestens eine Autorin wählen.');
         if (!slug) problems.push('Adresse (URL) fehlt.');
-        if (existing.includes(slug)) problems.push('Diese Adresse gibt es schon. Bitte Titel oder URL ändern.');
-        const hasEn = Boolean(v('title_en') || v('body_en'));
-        if (hasEn && (!v('title_en') || v('description_en').length < 50 || v('body_en').length < 30)) problems.push('Englische Version: Titel, Beschreibung (min. 50 Zeichen) und Text ausfüllen oder alles leer lassen.');
+        if (DATA.posts.includes(slug)) problems.push('Diese URL gibt es schon. Bitte Titel oder URL ändern.');
+        newPlaces.forEach((p, i) => {
+          const n = p.name || `Adresse ${i + 1}`;
+          if (!p.name) problems.push(`${n}: Name fehlt.`);
+          if (!p.street || !p.postalCode || !p.city) problems.push(`${n}: Strasse, PLZ und Ort ausfüllen.`);
+          if (!p.summary) problems.push(`${n}: Kurzbeschreibung fehlt.`);
+          if (p.website && !/^(https?:\/\/)?[\w-]+(\.[\w-]+)+/.test(p.website)) problems.push(`${n}: Webseite ungültig.`);
+        });
+        const hasEn = Boolean(val('title_en') || val('body_en'));
+        if (hasEn && (!val('title_en') || val('description_en').length < 50 || val('body_en').length < 30)) problems.push('Englische Version: Titel, Beschreibung (min. 50 Zeichen) und Text ausfüllen oder alles leer lassen.');
         if (problems.length) { setStatus(problems.join('<br>'), true); return; }
 
-        submitBtn.disabled = true;
-        setStatus('Wird hochgeladen …');
+        submitBtns.forEach((b) => (b.disabled = true));
         try {
+          // Fehlende Positionen nachschlagen
+          const lis = $$('.place:not(.place--existing)', placeList);
+          for (const li of lis) {
+            if (!li.dataset.lat) {
+              setStatus('Suche Positionen für die Karte …');
+              if (!(await geocode(li))) throw new Error(`Für «${$<HTMLInputElement>('[data-f="name"]', li).value}» wurde keine Position gefunden. Bitte Adresse prüfen.`);
+            }
+          }
+          setStatus('Wird hochgeladen …');
           const check = await gh(`/contents/src/content/posts/de/${slug}.md?ref=${BRANCH}`);
-          if (check.status !== 404) throw new Error('Diese Adresse gibt es schon. Bitte Titel oder URL ändern.');
+          if (check.status !== 404) throw new Error('Diese URL gibt es schon. Bitte Titel oder URL ändern.');
 
-          const coverPath = `src/content/posts/images/${slug}.jpg`;
-          const common = { category: v('category'), date: v('date') || new Date().toISOString().slice(0, 10), authors, image: `../images/${slug}.jpg`, featured: checked('featured'), draft: checked('draft') };
-          const files: { path: string; data: Blob | string }[] = [
-            { path: coverPath, data: cover! },
-            ...pending.filter((p) => v('body').includes(p.path.split('/').pop()!) || v('body_en').includes(p.path.split('/').pop()!)),
-            { path: `src/content/posts/de/${slug}.md`, data: frontmatter({ ...common, title: v('title'), description: v('description'), imageAlt: v('imageAlt'), disclosure: v('disclosure') }) + v('body') + '\n' },
-          ];
+          const files: { path: string; data: Blob | string }[] = [{ path: `${IMG_DIR}/${slug}.jpg`, data: cover! }];
+          for (const [path, blob] of uploads) {
+            if (path.startsWith('place:')) continue;
+            if (markdown.includes(path.split('/').pop()!) || val('body_en').includes(path.split('/').pop()!)) files.push({ path, data: blob });
+          }
+
+          // Neue Adressen als Dateien
+          const placeIds: string[] = [];
+          const usedIds = new Set(DATA.places);
+          for (const li of $$('.place', placeList)) {
+            if (li.dataset.id) { placeIds.push(li.dataset.id); continue; }
+            const p: Record<string, string> = {};
+            $$<HTMLInputElement>('[data-f]', li).forEach((i) => { p[i.dataset.f!] = i.value.trim(); });
+            let id = slugify(p.name) || `ort-${uid()}`;
+            while (usedIds.has(id)) id = `${slugify(p.name)}-${uid()}`;
+            usedIds.add(id);
+            const json: Record<string, unknown> = {
+              name: p.name,
+              category: val('category'),
+              type: p.type,
+              street: p.street,
+              postalCode: p.postalCode,
+              city: p.city,
+              area: p.area || p.city,
+              lat: Number(li.dataset.lat),
+              lng: Number(li.dataset.lng),
+              ...(p.cuisine ? { cuisine: p.cuisine } : {}),
+              ...(li.dataset.price ? { price: Number(li.dataset.price) } : {}),
+              ...(p.phone ? { phone: p.phone } : {}),
+              ...(p.website ? { website: normUrl(p.website) } : {}),
+              ...(p.award ? { award: p.award } : {}),
+              summary: { de: p.summary, en: p.summary },
+              post: slug,
+            };
+            if (li.dataset.img && uploads.has(`place:${li.dataset.img}`)) {
+              files.push({ path: `${IMG_DIR}/${id}.jpg`, data: uploads.get(`place:${li.dataset.img}`)! });
+              json.image = `../posts/images/${id}.jpg`;
+            }
+            files.push({ path: `src/content/places/${id}.json`, data: `${JSON.stringify(json, null, 2)}\n` });
+            placeIds.push(id);
+          }
+
+          const faq = collectFaqs();
+          const front = (o: { title: string; description: string; imageAlt: string; disclosure: string; faq: { q: string; a: string }[]; urlSlug?: string }) => [
+            '---',
+            `title: ${yaml(o.title)}`,
+            `description: ${yaml(o.description)}`,
+            ...(o.urlSlug ? [`urlSlug: ${yaml(o.urlSlug)}`] : []),
+            `category: ${val('category')}`,
+            `date: ${val('date') || new Date().toISOString().slice(0, 10)}`,
+            `authors: [${authors.map(yaml).join(', ')}]`,
+            `image: ../images/${slug}.jpg`,
+            `imageAlt: ${yaml(o.imageAlt)}`,
+            ...(field('featured').checked ? ['featured: true'] : []),
+            ...(field('draft').checked ? ['draft: true'] : []),
+            ...(o.disclosure ? [`disclosure: ${yaml(o.disclosure)}`] : []),
+            ...(placeIds.length ? [`places: [${placeIds.map(yaml).join(', ')}]`] : []),
+            ...(o.faq.length ? ['faq:', ...o.faq.flatMap((f) => [`  - q: ${yaml(f.q)}`, `    a: ${yaml(f.a)}`])] : []),
+            '---',
+            '',
+          ].join('\n');
+
+          files.push({ path: `src/content/posts/de/${slug}.md`, data: `${front({ title: val('title'), description: val('description'), imageAlt: val('imageAlt'), disclosure: val('disclosure'), faq })}${markdown}\n` });
           if (hasEn) {
-            const enSlug = slugify(v('title_en'));
-            files.push({ path: `src/content/posts/en/${slug}.md`, data: frontmatter({ ...common, title: v('title_en'), description: v('description_en'), imageAlt: v('imageAlt_en') || v('imageAlt'), disclosure: '', urlSlug: enSlug !== slug ? enSlug : undefined }) + v('body_en') + '\n' });
+            const enSlug = slugify(val('title_en'));
+            files.push({ path: `src/content/posts/en/${slug}.md`, data: `${front({ title: val('title_en'), description: val('description_en'), imageAlt: val('imageAlt'), disclosure: '', faq: [], urlSlug: enSlug !== slug ? enSlug : undefined })}${val('body_en')}\n` });
           }
 
           const ref = await (await gh(`/git/ref/heads/${BRANCH}`)).json();
           const head = ref.object.sha;
           const baseTree = (await (await gh(`/git/commits/${head}`)).json()).tree.sha;
           const tree = [];
-          for (const f of files) {
-            setStatus(`Lade hoch: ${f.path.split('/').pop()} …`);
+          for (const [i, f] of files.entries()) {
+            setStatus(`Lade hoch (${i + 1}/${files.length}): ${esc(f.path.split('/').pop()!)} …`);
             const blob = await (await gh('/git/blobs', { method: 'POST', body: JSON.stringify({ content: await toBase64(f.data), encoding: 'base64' }) })).json();
             tree.push({ path: f.path, mode: '100644', type: 'blob', sha: blob.sha });
           }
           const newTree = await (await gh('/git/trees', { method: 'POST', body: JSON.stringify({ base_tree: baseTree, tree }) })).json();
-          const commit = await (await gh('/git/commits', { method: 'POST', body: JSON.stringify({ message: `Neuer Beitrag: ${v('title')}`, tree: newTree.sha, parents: [head] }) })).json();
+          const commit = await (await gh('/git/commits', { method: 'POST', body: JSON.stringify({ message: `Neuer Beitrag: ${val('title')}`, tree: newTree.sha, parents: [head] }) })).json();
           await gh(`/git/refs/heads/${BRANCH}`, { method: 'PATCH', body: JSON.stringify({ sha: commit.sha }) });
 
-          existing.push(slug);
-          store.del(DRAFT);
-          const url = new URL(`${v('category')}/${slug}/`, SITE).href;
-          resetForm();
-          if (common.draft) {
-            setStatus('Als Entwurf gespeichert. Er ist auf der Seite nicht sichtbar.');
-            return;
-          }
-          setStatus(`Gespeichert! Die Seite wird jetzt neu gebaut (ca. 1–2 Minuten).<br><span data-live>Warte auf Veröffentlichung …</span>`);
+          DATA.posts.push(slug);
+          placeIds.forEach((id) => DATA.places.push(id));
+          const draft = field('draft').checked;
+          const url = new URL(`${val('category')}/${slug}/`, SITE).href;
+          resetAll();
+          if (draft) { setStatus('Als Entwurf gespeichert. Er ist auf der Seite nicht sichtbar.'); return; }
+          setStatus('Gespeichert! Die Seite wird jetzt neu gebaut (ca. 1–2 Minuten) …');
           for (let i = 0; i < 40; i++) {
             await new Promise((r) => setTimeout(r, 10000));
-            const res = await fetch(url, { method: 'HEAD', cache: 'no-store' }).catch(() => null);
-            if (res?.ok) {
-              setStatus(`Veröffentlicht! <a href="${url}" target="_blank">Beitrag ansehen →</a>`);
-              return;
-            }
+            const res = await fetch(`${url}?v=${Date.now()}`, { cache: 'no-store' }).catch(() => null);
+            if (res?.ok) { setStatus(`Veröffentlicht! <a href="${url}" target="_blank">Beitrag ansehen →</a>`); return; }
           }
           setStatus(`Gespeichert. Der Beitrag erscheint in Kürze unter <a href="${url}" target="_blank">${url}</a>.`);
         } catch (ex) {
           setStatus(`Fehler: ${esc((ex as Error).message)}`, true);
         } finally {
-          submitBtn.disabled = false;
+          submitBtns.forEach((b) => (b.disabled = false));
         }
       });
+
+      loadDraft();
+      if (token) showEditor(true);
     </script>
   </body>
 </html>
