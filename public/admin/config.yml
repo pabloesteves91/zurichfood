@@ -15,7 +15,7 @@ site_url: https://pabloesteves91.github.io/zurichfood/
 locale: de
 
 media_folder: /src/content/posts/images
-public_folder: ../images
+public_folder: /src/content/posts/images
 
 i18n:
   structure: multiple_folders
@@ -145,5 +145,5 @@ collections:
         fields:
           - { name: de, label: Deutsch, widget: string }
           - { name: en, label: Englisch, widget: string }
-      - { name: image, label: 'Bild (optional)', widget: image, required: false, media_folder: /src/content/posts/images, public_folder: ../posts/images }
+      - { name: image, label: 'Bild (optional)', widget: image, required: false, media_folder: /src/content/posts/images, public_folder: /src/content/posts/images }
       - { name: post, label: 'Beitrag (Dateiname ohne .md)', widget: string, required: false }
